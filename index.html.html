@@ -393,6 +393,9 @@ header {
     <button class="wc-btn" id="walletBtn" onclick="openModal()">
       <span>🔌</span><span id="walletBtnTxt">CONNECT WALLET</span>
     </button>
+    <button class="wc-btn hidden" id="disconnectBtn" onclick="disconnectWallet()" style="border-color:rgba(255,61,110,0.4);color:var(--red);">
+      <span>⏏</span><span>DISCONNECT</span>
+    </button>
   </div>
 </header>
 
@@ -606,7 +609,7 @@ header {
 // CONFIG
 // ═══════════════════════════════════════════════
 const ARC = {
-  chainId: '0x4CE3B2', chainIdDec: 5042002,
+  chainId: '0x4cef52', chainIdDec: 5042002,
   chainName: 'Arc Testnet',
   rpcUrls: ['https://rpc.testnet.arc.network'],
   blockExplorerUrls: ['https://testnet.arcscan.app'],
@@ -818,7 +821,8 @@ async function connectWalletConnect() {
   else addLog('err','WalletConnect requires npm build with @walletconnect/modal. Use MetaMask or Zerion extension for now.');
 }
 function onConnected() {
-  document.getElementById('walletBtn').classList.add('connected');
+  document.getElementById('walletBtn').classList.add('hidden');
+  document.getElementById('disconnectBtn').classList.remove('hidden');
   document.getElementById('walletBtnTxt').textContent = shortAddr(account);
   document.getElementById('walletPill').textContent  = '🟢 '+shortAddr(account);
   document.getElementById('walletChip').querySelector('span').textContent = shortAddr(account);
@@ -847,18 +851,67 @@ function subscribeEvents() {
   window.ethereum.on('chainChanged',cid=>{ chainId=parseInt(cid,16); addLog('pend',`Chain → ${chainId}`); refreshBalances(); });
 }
 function disconnectWallet() {
-  provider=signer=account=null;
-  document.getElementById('walletBtn').classList.remove('connected');
+  provider=signer=account=null; chainId=null;
+  document.getElementById('walletBtn').classList.remove('hidden');
+  document.getElementById('disconnectBtn').classList.add('hidden');
   document.getElementById('walletBtnTxt').textContent='CONNECT WALLET';
   document.getElementById('walletPill').textContent='🔌 Disconnected';
+  document.getElementById('walletChip').querySelector('span').textContent='NOT CONNECTED';
+  document.getElementById('usdcBalDisp').textContent='—';
+  document.getElementById('fromBal').textContent='—';
+  document.getElementById('toBal').textContent='—';
+  document.getElementById('bridgeBal').textContent='—';
+  if(isLiveMode){ document.getElementById('swapBtn').disabled=true; document.getElementById('bridgeBtn').disabled=true; }
+  if(autoRunning){ document.getElementById('togAuto').classList.remove('on'); autoRunning=false; clearTimeout(autoTimer); }
+  addLog('pend','Wallet disconnected');
 }
 
 async function ensureArcNetwork() {
-  if(chainId===ARC.chainIdDec) return true;
+  // Re-read current chainId from wallet directly
   try {
-    await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:ARC.chainId}]});
-    chainId=ARC.chainIdDec; provider=new ethers.BrowserProvider(window.ethereum); signer=await provider.getSigner(); return true;
-  } catch(e){ if(e.code===4902){await addArcNetwork();return chainId===ARC.chainIdDec;} return false; }
+    const cid = await window.ethereum.request({ method: 'eth_chainId' });
+    chainId = parseInt(cid, 16);
+  } catch {}
+
+  if (chainId === ARC.chainIdDec) return true;
+
+  addLog('pend', `Switching to Arc Testnet (Chain ID ${ARC.chainIdDec})…`);
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: ARC.chainId }]
+    });
+  } catch(e) {
+    if (e.code === 4902 || e.code === -32603) {
+      // Chain not added yet — add it first
+      try {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{ chainId: ARC.chainId, chainName: ARC.chainName, rpcUrls: ARC.rpcUrls, blockExplorerUrls: ARC.blockExplorerUrls, nativeCurrency: ARC.nativeCurrency }]
+        });
+      } catch(e2) {
+        addLog('err', `Could not add Arc Testnet: ${e2.message?.slice(0,60)}`);
+        return false;
+      }
+    } else {
+      addLog('err', `Network switch rejected: ${e.message?.slice(0,60)}`);
+      return false;
+    }
+  }
+
+  // Wait for wallet to actually switch, then refresh provider + signer
+  await sleep(800);
+  try {
+    const cid2 = await window.ethereum.request({ method: 'eth_chainId' });
+    chainId = parseInt(cid2, 16);
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    addLog('ok', `Switched to Arc Testnet ✅`);
+    return chainId === ARC.chainIdDec;
+  } catch(e) {
+    addLog('err', `Failed to refresh provider after switch: ${e.message?.slice(0,40)}`);
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════════
