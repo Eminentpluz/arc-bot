@@ -848,8 +848,11 @@ function addLog(type, msg, hash='') {
   const t = new Date().toLocaleTimeString();
   const el = document.createElement('div');
   el.className = `log-entry ${type}`;
-  el.innerHTML = `<div class="log-time">${t}${isLiveMode?'':' ⚙SIM'}</div><div class="log-msg">${msg}</div>`
-    + (hash?`<div class="log-hash" onclick="window.open('https://testnet.arcscan.app/tx/${hash}','_blank')">📋 ${hash.slice(0,22)}… (view)</div>`:'');
+  // ONLY show explorer link in live mode with a real hash
+  const showLink = hash && isLiveMode;
+  el.innerHTML = `<div class="log-time">${t}${isLiveMode?' ⚡LIVE':' ⚙SIM'}</div><div class="log-msg">${msg}</div>`
+    + (showLink ? `<div class="log-hash" onclick="window.open('https://testnet.arcscan.app/tx/${hash}','_blank')">📋 ${hash.slice(0,22)}… (view on explorer)</div>` : '')
+    + (!showLink && hash ? `<div class="log-time" style="margin-top:3px;color:var(--text3)">Simulated hash — not real</div>` : '');
   wrap.prepend(el);
   while(wrap.children.length>40) wrap.removeChild(wrap.lastChild);
 }
@@ -1053,33 +1056,36 @@ function switchTab(tab){
 // ═══════════════════════════════════════════════
 // SIMULATION EXECUTION (no wallet needed)
 // ═══════════════════════════════════════════════
-function fakeTx(){ return '0x'+[...Array(64)].map(()=>Math.floor(Math.random()*16).toString(16)).join(''); }
 
 async function simSwap(fromSym, toSym, amount) {
   const rate=getSwapRate(fromSym,toSym), amtOut=(amount*rate).toFixed(6);
-  const tx=fakeTx();
-  showProc(`⚙ SIM SWAP`, ['Simulating jitter delay...','Checking simulated balance...','Computing route...','Simulating approval...','Signing (simulation)...','Broadcasting (simulation)...','Awaiting simulated finality...','Confirming...']);
+  showProc(`⚙ SIM SWAP`, ['Simulating delay...','Checking simulated balance...','Computing route...','Simulating approval...','Signing (simulation)...','Broadcasting (simulation)...','Awaiting simulated finality...','Confirming...']);
   await AntiBotEngine.humanDelay(2000);
   for(let i=1;i<8;i++){await advStep(i);}
   const ok = Math.random()>0.04;
   hideProc();
   if(ok){
     successCount++; totalSwaps++; totalVol+=amount;
-    addLog('sim',`⚙ SIM SWAP: ${amount.toFixed(4)} ${fromSym} → ~${amtOut} ${toSym}`,tx);
-  } else addLog('err',`⚙ SIM SWAP FAILED: ${fromSym}→${toSym} (simulated revert)`);
+    // No fake hash passed — sim mode never shows explorer links
+    addLog('sim',`⚙ SIM: ${amount.toFixed(4)} ${fromSym} → ~${amtOut} ${toSym} [SIMULATED — no real tx]`);
+  } else {
+    addLog('err',`⚙ SIM FAILED: ${fromSym}→${toSym} (simulated revert)`);
+  }
   updateStats();
 }
+
 async function simBridge(amount) {
-  const tx=fakeTx();
-  showProc('⚙ SIM BRIDGE',['Jitter delay...','Switching chain (sim)...','Checking balance (sim)...','Approving TokenMessenger (sim)...','Signing depositForBurn (sim)...','Burn tx (sim)...','Attestation polling (sim)...','Mint on Arc (sim)...']);
+  showProc('⚙ SIM BRIDGE',['Jitter delay...','Switching chain (sim)...','Checking balance (sim)...','Approving (sim)...','Signing (sim)...','Burn tx (sim)...','Attestation (sim)...','Mint on Arc (sim)...']);
   await AntiBotEngine.humanDelay(3000);
   for(let i=1;i<8;i++){await advStep(i);}
   const ok=Math.random()>0.06;
   hideProc();
   if(ok){
     successCount++; totalBridges++; totalVol+=amount;
-    addLog('sim',`⚙ SIM BRIDGE: ${amount.toFixed(4)} USDC → Arc Testnet`,tx);
-  } else addLog('err',`⚙ SIM BRIDGE FAILED (simulated attestation timeout)`);
+    addLog('sim',`⚙ SIM: ${amount.toFixed(4)} USDC → Arc Testnet [SIMULATED — no real tx]`);
+  } else {
+    addLog('err',`⚙ SIM FAILED (simulated attestation timeout)`);
+  }
   updateStats();
 }
 
@@ -1317,6 +1323,13 @@ async function executeSwap(silent=false) {
   const fromSym=document.getElementById('fromToken').value;
   const toSym=document.getElementById('toToken').value;
   if(fromSym===toSym){addLog('err','Cannot swap same token');return;}
+
+  // LIVE MODE: must have wallet connected
+  if(isLiveMode && !account){
+    addLog('err','⚡ Connect your wallet first to execute a real transaction');
+    openModal(); return;
+  }
+
   let amt=parseFloat(document.getElementById('fromAmt').value);
   if(silent || !amt || amt<=0){
     const max=parseFloat(document.getElementById('maxAmt').value)||5;
@@ -1325,10 +1338,17 @@ async function executeSwap(silent=false) {
     fetchQuote();
   }
   const amount=AntiBotEngine.randomizeAmount(amt);
-  if(isLiveMode&&account) await liveSwap(fromSym,toSym,amount);
+  if(isLiveMode && account) await liveSwap(fromSym,toSym,amount);
   else await simSwap(fromSym,toSym,amount);
 }
+
 async function executeBridge(silent=false) {
+  // LIVE MODE: must have wallet connected
+  if(isLiveMode && !account){
+    addLog('err','⚡ Connect your wallet first to execute a real bridge');
+    openModal(); return;
+  }
+
   let amt=parseFloat(document.getElementById('bridgeAmt').value);
   if(silent || !amt || amt<=0){
     const max=parseFloat(document.getElementById('maxAmt').value)||5;
@@ -1337,7 +1357,7 @@ async function executeBridge(silent=false) {
     updateBridgeQuote();
   }
   const amount=AntiBotEngine.randomizeAmount(amt);
-  if(isLiveMode&&account) await liveBridge(amount);
+  if(isLiveMode && account) await liveBridge(amount);
   else await simBridge(amount);
 }
 
