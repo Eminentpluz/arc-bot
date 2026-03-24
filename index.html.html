@@ -1,424 +1,502 @@
 <!DOCTYPE html>
 
-<html lang="en" style="background:#0c0c0f;color:#f1f1f3">
+<html lang="en" style="background:#0f0f0f">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>ARC BOT</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth;background:#0c0c0f;color:#f1f1f3}
-
-:root{
-–bg:#0c0c0f;
-–surface:#131318;
-–card:#18181e;
-–card2:#1e1e26;
-–border:#26262f;
-–border-light:#2e2e3a;
-–gold:#f5c842;
-–gold2:#d4a017;
-–gold-dim:rgba(245,200,66,0.12);
-–gold-glow:rgba(245,200,66,0.08);
-–green:#22c55e;
-–green-dim:rgba(34,197,94,0.1);
-–red:#ef4444;
-–red-dim:rgba(239,68,68,0.1);
-–amber:#f59e0b;
-–blue:#3b82f6;
-–text:#f1f1f3;
-–text2:#9999aa;
-–text3:#55556a;
-–mono:‘JetBrains Mono’,monospace;
-–sans:‘Inter’,sans-serif;
+:root {
+–bg:     #0f0f0f;
+–card:   #1a1a1a;
+–card2:  #222222;
+–border: #2a2a2a;
+–gold:   #f0b429;
+–gold2:  #c8930a;
+–golddim:rgba(240,180,41,0.1);
+–green:  #3ecf8e;
+–red:    #f04040;
+–amber:  #f59e0b;
+–blue:   #4e8ef7;
+–text:   #efefef;
+–text2:  #888;
+–text3:  #555;
+–mono:   ‘JetBrains Mono’, monospace;
+–r:      12px;
 }
 
-body{
-font-family:var(–sans);
-background-color:#0c0c0f !important;
-background:var(–bg) !important;
-color:var(–text) !important;
-min-height:100vh;
-overflow-x:hidden;
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { background:var(–bg); }
+body {
+font-family: ‘Inter’, sans-serif;
+background: var(–bg);
+color: var(–text);
+min-height: 100vh;
+-webkit-font-smoothing: antialiased;
 }
-
-/* Subtle bg glow */
-body::before{
-content:’’;position:fixed;inset:0;pointer-events:none;z-index:0;
-background:
-radial-gradient(ellipse 60% 50% at 20% 0%,rgba(245,200,66,0.04) 0%,transparent 70%),
-radial-gradient(ellipse 40% 40% at 80% 100%,rgba(245,200,66,0.03) 0%,transparent 70%);
-}
-
-.app{max-width:1200px;margin:0 auto;padding:16px 14px 60px;position:relative;z-index:1}
-
-/* ── TOPBAR ── */
-.topbar{
-display:flex;align-items:center;justify-content:space-between;
-padding:0 0 16px;border-bottom:1px solid var(–border);
-margin-bottom:18px;flex-wrap:wrap;gap:10px;
-}
-.brand{display:flex;align-items:center;gap:12px}
-.brand-icon{
-width:38px;height:38px;border-radius:10px;
-background:linear-gradient(135deg,var(–gold),var(–gold2));
-display:flex;align-items:center;justify-content:center;
-font-size:18px;flex-shrink:0;
-box-shadow:0 0 16px rgba(245,200,66,0.25);
-}
-.brand-name{font-size:18px;font-weight:700;letter-spacing:0.3px;color:var(–text)}
-.brand-tag{font-size:10px;color:var(–text3);font-family:var(–mono);margin-top:1px}
-.topbar-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-
-/* Mode pill */
-.mode-pill{
-display:flex;background:var(–surface);border:1px solid var(–border);
-border-radius:8px;padding:3px;gap:2px;
-}
-.mpb{
-padding:5px 14px;border-radius:6px;border:none;
-font-family:var(–sans);font-size:12px;font-weight:500;
-cursor:pointer;transition:all 0.2s;color:var(–text2);background:transparent;
-}
-.mpb.active{background:var(–gold);color:#0c0c0f;font-weight:600;}
-
-.status-dot{
-display:flex;align-items:center;gap:6px;
-padding:6px 12px;border-radius:8px;font-size:12px;font-weight:500;
-}
-.status-dot.sim{background:rgba(245,158,11,0.1);color:var(–amber);border:1px solid rgba(245,158,11,0.2)}
-.status-dot.live{background:var(–green-dim);color:var(–green);border:1px solid rgba(34,197,94,0.2)}
-.sdot{width:6px;height:6px;border-radius:50%;animation:pulse2 2s ease-in-out infinite}
-.sim .sdot{background:var(–amber)} .live .sdot{background:var(–green)}
-@keyframes pulse2{0%,100%{opacity:1}50%{opacity:0.3}}
-
-#blockBadge{font-size:11px;color:var(–text3);font-family:var(–mono);background:var(–surface);border:1px solid var(–border);padding:5px 10px;border-radius:7px}@media(max-width:600px){#blockBadge{display:none}}
-
-.btn-connect{
-display:flex;align-items:center;gap:7px;
-padding:7px 16px;border-radius:8px;
-border:1px solid var(–border-light);
-background:var(–card);color:var(–text);
-font-family:var(–sans);font-size:13px;font-weight:500;
-cursor:pointer;transition:all 0.2s;white-space:nowrap;
-}
-.btn-connect:hover{border-color:var(–gold);background:var(–gold-dim)}
-.btn-connect.connected{border-color:rgba(34,197,94,0.4);color:var(–green)}
-.btn-disconnect{
-display:flex;align-items:center;gap:7px;
-padding:7px 16px;border-radius:8px;
-border:1px solid rgba(239,68,68,0.3);
-background:rgba(239,68,68,0.06);color:var(–red);
-font-family:var(–sans);font-size:13px;font-weight:500;
-cursor:pointer;transition:all 0.2s;
-}
-.btn-disconnect:hover{background:rgba(239,68,68,0.12)}
-
-/* ── NET BAR ── */
-.netbar{
-display:flex;align-items:center;gap:6px;
-padding:9px 12px;background:var(–surface);
-border:1px solid var(–border);border-radius:10px;
-margin-bottom:16px;
-overflow-x:auto;white-space:nowrap;
--webkit-overflow-scrolling:touch;
-}
-.netbar::-webkit-scrollbar{display:none}
-.nchip{font-size:11px;color:var(–text3);font-family:var(–mono);display:inline-flex;align-items:center;gap:5px;flex-shrink:0}
-.nchip strong{color:var(–text2)}
-.nchip a{color:var(–gold);text-decoration:none}
-.nchip a:hover{color:var(–gold2)}
-.nsep{width:1px;height:12px;background:var(–border);flex-shrink:0}
-
-/* SIM BANNER */
-.sim-banner{
-display:flex;align-items:center;gap:12px;
-background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);
-border-radius:10px;padding:10px 14px;margin-bottom:20px;
-}
-.sim-banner.hidden{display:none!important}
-.sim-banner-txt{font-size:12px;color:var(–amber);flex:1}
-.sim-banner-txt strong{font-weight:600}
-.btn-golive{
-padding:5px 14px;border-radius:7px;
-border:1px solid rgba(245,200,66,0.4);
-background:transparent;color:var(–gold);
-font-family:var(–sans);font-size:12px;font-weight:500;
-cursor:pointer;white-space:nowrap;transition:all 0.2s;
-}
-.btn-golive:hover{background:var(–gold-dim)}
 
 /* ── LAYOUT ── */
-.grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
-@media(max-width:860px){.grid{grid-template-columns:1fr}}
-@media(max-width:500px){
-.topbar-right{width:100%}
-.brand-name{font-size:16px}
-.brand-tag{display:none}
-.btn-connect,.btn-disconnect{font-size:12px;padding:6px 12px}
-.mode-pill{flex:1}
-.mpb{flex:1;text-align:center}
+.page { max-width: 480px; margin: 0 auto; padding: 16px 14px 80px; }
+
+/* ── HEADER ── */
+.header {
+display: flex; align-items: center; justify-content: space-between;
+padding-bottom: 14px; border-bottom: 1px solid var(–border);
+margin-bottom: 16px;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+width: 36px; height: 36px; border-radius: 10px;
+background: linear-gradient(135deg, var(–gold), var(–gold2));
+display: flex; align-items: center; justify-content: center;
+font-size: 17px; font-weight: bold; color: #0f0f0f;
+box-shadow: 0 0 14px rgba(240,180,41,0.3);
+}
+.logo-name { font-size: 17px; font-weight: 700; color: var(–text); }
+.logo-sub  { font-size: 10px; color: var(–text3); margin-top: 1px; font-family: var(–mono); }
+
+.header-right { display: flex; align-items: center; gap: 7px; }
+
+/* Mode toggle */
+
+/* Wallet button */
+.btn-wallet {
+padding: 7px 13px; border-radius: 8px; border: 1px solid var(–border);
+background: var(–card); color: var(–text); font-size: 12px; font-weight: 500;
+cursor: pointer; display: flex; align-items: center; gap: 6px;
+font-family: ‘Inter’, sans-serif; transition: all 0.2s; white-space: nowrap;
+}
+.btn-wallet:hover { border-color: var(–gold); }
+.btn-wallet.connected { border-color: rgba(62,207,142,0.4); color: var(–green); }
+.btn-wallet.danger { border-color: rgba(240,64,64,0.3); color: var(–red); background: rgba(240,64,64,0.05); }
+
+/* ── STATUS BAR ── */
+.status-bar {
+display: flex; align-items: center; gap: 8px;
+background: var(–card); border: 1px solid var(–border);
+border-radius: 10px; padding: 9px 12px; margin-bottom: 14px;
+overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;
+}
+.status-bar::-webkit-scrollbar { display: none; }
+.sb-item { font-size: 11px; color: var(–text3); font-family: var(–mono); flex-shrink: 0; }
+.sb-item b { color: var(–text2); }
+.sb-item a { color: var(–gold); text-decoration: none; }
+.sb-sep { width: 1px; height: 12px; background: var(–border); flex-shrink: 0; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; animation: blink 2s infinite; }
+.live-dot.green { background: var(–green); }
+.live-dot.amber { background: var(–amber); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── NOTICE BANNER ── */
+.notice {
+display: flex; align-items: flex-start; gap: 10px;
+border-radius: 10px; padding: 11px 13px; margin-bottom: 14px;
+font-size: 12px; line-height: 1.6;
 }
 
-/* ── CARD ── */
-.card{background:var(–card);border:1px solid var(–border);border-radius:14px;padding:20px}
-.card-title{font-size:11px;font-weight:600;letter-spacing:1px;color:var(–text3);text-transform:uppercase;margin-bottom:16px}
-
-/* ── TABS ── */
-.tabs{display:flex;background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:3px;gap:3px;margin-bottom:20px}
-.tab{flex:1;padding:8px;border-radius:7px;border:none;background:transparent;color:var(–text3);font-family:var(–sans);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s}
-.tab.active{background:var(–gold);color:#0c0c0f;font-weight:600}
-
-/* ── TOKEN PANEL ── */
-.tok-panel{
-background:var(–surface);border:1px solid var(–border);
-border-radius:12px;padding:14px;margin-bottom:8px;
-transition:border-color 0.2s;
+.notice.warn  { background: rgba(240,180,41,0.06); border: 1px solid rgba(240,180,41,0.15); color: #c8930a; }
+.notice.hidden { display: none !important; }
+.notice-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.notice-text { flex: 1; }
+.notice-text strong { font-weight: 600; }
+.btn-notice {
+padding: 4px 12px; border-radius: 6px; border: 1px solid currentColor;
+background: transparent; color: inherit; font-size: 11px; font-weight: 500;
+cursor: pointer; white-space: nowrap; flex-shrink: 0; font-family: ‘Inter’, sans-serif;
 }
-.tok-panel:focus-within{border-color:rgba(245,200,66,0.3)}
-.tok-label{font-size:11px;font-weight:500;color:var(–text3);margin-bottom:10px;letter-spacing:0.3px}
-.tok-row{display:flex;align-items:center;gap:10px}
-.tok-btn{
-display:flex;align-items:center;gap:8px;
-background:var(–card);border:1px solid var(–border-light);
-border-radius:9px;padding:8px 12px;cursor:pointer;
-min-width:120px;transition:all 0.2s;
-}
-.tok-btn:hover{border-color:var(–gold);background:var(–gold-dim)}
-.tok-emoji{font-size:18px;line-height:1}
-.tok-sym{font-size:14px;font-weight:600;color:var(–text)}
-.tok-sub{font-size:10px;color:var(–text3);margin-top:1px}
-.tok-caret{margin-left:auto;color:var(–text3);font-size:10px}
-.amt-field{flex:1;background:transparent;border:none;color:var(–text);font-family:var(–mono);font-size:22px;font-weight:500;text-align:right;outline:none;width:100%}
-.amt-field::placeholder{color:var(–text3)}
-.tok-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
-.tok-bal{font-size:12px;color:var(–text3)}
-.tok-bal strong{color:var(–text2)}
-.btn-max{font-size:11px;color:var(–gold);cursor:pointer;font-weight:500;transition:opacity 0.2s;background:none;border:none;font-family:var(–sans)}
-.btn-max:hover{opacity:0.7}
 
-/* Flip button */
-.flip-wrap{display:flex;justify-content:center;padding:6px 0;position:relative}
-.btn-flip{
-width:34px;height:34px;border-radius:50%;
-background:var(–card);border:1px solid var(–border-light);
-display:flex;align-items:center;justify-content:center;
-cursor:pointer;color:var(–text2);font-size:15px;
-transition:all 0.3s;z-index:1;
+/* ── MAIN CARD ── */
+.main-card {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 16px; padding: 18px; margin-bottom: 14px;
 }
-.btn-flip:hover{transform:rotate(180deg);border-color:var(–gold);color:var(–gold);background:var(–gold-dim)}
+
+/* Tabs */
+.tabs {
+display: flex; background: var(–bg); border: 1px solid var(–border);
+border-radius: 10px; padding: 3px; gap: 3px; margin-bottom: 18px;
+}
+.tab-btn {
+flex: 1; padding: 8px; border-radius: 7px; border: none;
+background: transparent; color: var(–text2); font-size: 13px; font-weight: 500;
+cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
+}
+.tab-btn.active { background: var(–gold); color: #0f0f0f; font-weight: 600; }
+
+/* Token box */
+.tok-box {
+background: var(–bg); border: 1px solid var(–border);
+border-radius: 12px; padding: 13px 14px; transition: border-color 0.2s;
+}
+.tok-box:focus-within { border-color: rgba(240,180,41,0.4); }
+.tok-lbl { font-size: 11px; font-weight: 500; color: var(–text3); margin-bottom: 9px; letter-spacing: 0.3px; }
+.tok-inner { display: flex; align-items: center; gap: 10px; }
+.tok-select-btn {
+display: flex; align-items: center; gap: 8px;
+background: var(–card2); border: 1px solid var(–border);
+border-radius: 9px; padding: 8px 11px; cursor: pointer;
+min-width: 110px; transition: all 0.2s; flex-shrink: 0;
+}
+.tok-select-btn:hover { border-color: var(–gold); background: var(–golddim); }
+.t-emoji { font-size: 18px; }
+.t-sym   { font-size: 14px; font-weight: 600; color: var(–text); }
+.t-name  { font-size: 10px; color: var(–text3); margin-top: 1px; }
+.t-caret { margin-left: auto; color: var(–text3); font-size: 10px; }
+.tok-amount {
+flex: 1; background: transparent; border: none; outline: none;
+font-family: var(–mono); font-size: 22px; font-weight: 500;
+color: var(–text); text-align: right; width: 100%;
+}
+.tok-amount::placeholder { color: var(–text3); }
+.tok-footer {
+display: flex; justify-content: space-between; align-items: center;
+margin-top: 8px;
+}
+.tok-bal { font-size: 12px; color: var(–text3); }
+.tok-bal b { color: var(–text2); }
+.btn-max {
+font-size: 11px; font-weight: 600; color: var(–gold);
+background: none; border: none; cursor: pointer; font-family: ‘Inter’, sans-serif;
+}
+
+/* Swap arrow */
+.swap-arrow-wrap { display: flex; justify-content: center; padding: 8px 0; }
+.swap-arrow-btn {
+width: 32px; height: 32px; border-radius: 50%;
+background: var(–card2); border: 1px solid var(–border);
+display: flex; align-items: center; justify-content: center;
+cursor: pointer; color: var(–text2); font-size: 14px;
+transition: all 0.3s;
+}
+.swap-arrow-btn:hover { transform: rotate(180deg); border-color: var(–gold); color: var(–gold); }
 
 /* Slippage */
-.slip-row{display:flex;align-items:center;gap:6px;margin:12px 0}
-.slip-lbl{font-size:11px;color:var(–text3);font-weight:500;flex:1}
-.slip-btn{padding:4px 12px;border-radius:6px;border:1px solid var(–border);background:transparent;color:var(–text3);font-size:11px;font-family:var(–sans);cursor:pointer;transition:all 0.2s}
-.slip-btn:hover{border-color:var(–gold);color:var(–gold)}
-.slip-btn.active{border-color:var(–gold);background:var(–gold-dim);color:var(–gold);font-weight:500}
+.slip-wrap { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; }
+.slip-label { font-size: 11px; font-weight: 500; color: var(–text3); flex: 1; }
+.slip-opt {
+padding: 4px 11px; border-radius: 6px; border: 1px solid var(–border);
+background: transparent; color: var(–text3); font-size: 11px;
+cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
+}
+.slip-opt.active { border-color: var(–gold); background: var(–golddim); color: var(–gold); font-weight: 500; }
 
-/* Info table */
-.info-table{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:12px;margin:14px 0}
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
-.info-row:not(:last-child){border-bottom:1px solid var(–border)}
-.info-k{color:var(–text3)}
-.info-v{color:var(–text2);font-family:var(–mono);font-size:11px}
-.info-v.gold{color:var(–gold)}
-.info-v.green{color:var(–green)}
-.info-v.amber{color:var(–amber)}
+/* Details table */
+.details {
+background: var(–bg); border: 1px solid var(–border);
+border-radius: 10px; margin: 14px 0; overflow: hidden;
+}
+.detail-row {
+display: flex; justify-content: space-between; align-items: center;
+padding: 8px 12px; border-bottom: 1px solid var(–border); font-size: 12px;
+}
+.detail-row:last-child { border-bottom: none; }
+.dk { color: var(–text3); }
+.dv { color: var(–text2); font-family: var(–mono); font-size: 11px; }
+.dv.gold   { color: var(–gold); }
+.dv.green  { color: var(–green); }
+.dv.amber  { color: var(–amber); }
+.dv.warn   { color: var(–amber); font-size: 10px; font-family: ‘Inter’, sans-serif; }
 
 /* Execute button */
-.btn-exec{
-width:100%;padding:14px;border-radius:10px;border:none;
-background:linear-gradient(135deg,var(–gold),var(–gold2));
-color:#0c0c0f;font-family:var(–sans);font-size:15px;font-weight:700;
-cursor:pointer;transition:all 0.25s;letter-spacing:0.3px;
-position:relative;overflow:hidden;
+.btn-exec {
+width: 100%; padding: 15px; border-radius: 12px; border: none;
+background: linear-gradient(135deg, var(–gold), var(–gold2));
+color: #0f0f0f; font-size: 15px; font-weight: 700;
+cursor: pointer; transition: all 0.25s; font-family: ‘Inter’, sans-serif;
+letter-spacing: 0.3px;
 }
-.btn-exec:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(245,200,66,0.3)}
-.btn-exec:active:not(:disabled){transform:translateY(0)}
-.btn-exec:disabled{opacity:0.4;cursor:not-allowed;transform:none}
-.exec-note{text-align:center;margin-top:8px;font-size:11px;color:var(–text3)}
+.btn-exec:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,180,41,0.3); }
+.btn-exec:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.exec-sub { text-align: center; margin-top: 8px; font-size: 11px; color: var(–text3); line-height: 1.5; }
 
 /* Chain selector */
-.chain-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.chain-sel{flex:1;appearance:none;outline:none;background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px 12px;color:var(–text);font-family:var(–sans);font-size:12px;cursor:pointer}
-.chain-sel:focus{border-color:rgba(245,200,66,0.4)}
-.chain-arrow{color:var(–gold);font-size:18px;flex-shrink:0}
+.chain-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.chain-pick {
+flex: 1; appearance: none; outline: none;
+background: var(–bg); border: 1px solid var(–border);
+border-radius: 9px; padding: 10px 12px; color: var(–text);
+font-family: ‘Inter’, sans-serif; font-size: 12px; cursor: pointer;
+}
+.chain-pick:focus { border-color: rgba(240,180,41,0.4); }
+.chain-sep { color: var(–gold); font-size: 18px; flex-shrink: 0; }
 
-/* ── SIDEBAR ── */
-.sidebar{display:flex;flex-direction:column;gap:14px}
+/* ── SECONDARY CARDS ── */
+.sec-card {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 14px; padding: 16px; margin-bottom: 12px;
+}
+.sec-title { font-size: 11px; font-weight: 600; color: var(–text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
 
-/* Stats */
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stat-box{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:12px;text-align:center}
-.stat-val{font-size:20px;font-weight:700;color:var(–gold);font-family:var(–mono)}
-.stat-key{font-size:10px;color:var(–text3);margin-top:3px;font-weight:500;letter-spacing:0.5px}
-.stat-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500}
-.badge-gold{background:var(–gold-dim);color:var(–gold);border:1px solid rgba(245,200,66,0.2)}
-.badge-green{background:var(–green-dim);color:var(–green);border:1px solid rgba(34,197,94,0.2)}
-.badge-red{background:var(–red-dim);color:var(–red);border:1px solid rgba(239,68,68,0.2)}
-.badge-gray{background:rgba(153,153,170,0.1);color:var(–text3);border:1px solid var(–border)}
+/* Stats grid */
+.stats-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.stat-tile {
+background: var(–bg); border: 1px solid var(–border);
+border-radius: 10px; padding: 12px; text-align: center;
+}
+.stat-n { font-size: 22px; font-weight: 700; color: var(–gold); font-family: var(–mono); }
+.stat-l { font-size: 10px; font-weight: 500; color: var(–text3); margin-top: 3px; letter-spacing: 0.5px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+display: inline-flex; align-items: center; gap: 4px;
+padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 500;
+}
+.chip-gold  { background: var(–golddim); color: var(–gold); border: 1px solid rgba(240,180,41,0.2); }
+.chip-green { background: rgba(62,207,142,0.08); color: var(–green); border: 1px solid rgba(62,207,142,0.2); }
+.chip-gray  { background: rgba(255,255,255,0.05); color: var(–text3); border: 1px solid var(–border); }
 
 /* Bot config */
-.config-list{display:flex;flex-direction:column;gap:10px}
-.cfg-row{display:flex;align-items:center;justify-content:space-between}
-.cfg-label{font-size:12px;color:var(–text2);font-weight:500}
-.toggle{width:38px;height:20px;border-radius:10px;background:var(–border-light);border:none;position:relative;cursor:pointer;transition:background 0.3s;outline:none;flex-shrink:0}
-.toggle.on{background:var(–gold)}
-.toggle::after{content:’’;position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
-.toggle.on::after{transform:translateX(18px)}
-.cfg-input-wrap{margin-top:2px}
-.cfg-input-label{font-size:10px;color:var(–text3);margin-bottom:4px;font-weight:500;letter-spacing:0.3px}
-.cfg-input{width:100%;background:var(–surface);border:1px solid var(–border);border-radius:7px;padding:7px 10px;color:var(–text);font-family:var(–mono);font-size:12px;outline:none;transition:border-color 0.2s}
-.cfg-input:focus{border-color:rgba(245,200,66,0.4)}
-.cfg-note{font-size:10px;color:var(–text3);line-height:1.7;padding:8px;background:var(–surface);border-radius:8px;border:1px solid var(–border)}
-.cfg-note strong{color:var(–amber)}
+.config-rows { display: flex; flex-direction: column; gap: 11px; }
+.cfg-row { display: flex; align-items: center; justify-content: space-between; }
+.cfg-lbl { font-size: 13px; color: var(–text2); }
+.toggle {
+width: 40px; height: 22px; border-radius: 11px; background: var(–border);
+border: none; position: relative; cursor: pointer; transition: background 0.3s; outline: none;
+}
+.toggle.on { background: var(–gold); }
+.toggle::after {
+content: ‘’; position: absolute; top: 3px; left: 3px;
+width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.3s;
+box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle.on::after { transform: translateX(18px); }
+.cfg-inp-wrap { margin-top: 4px; }
+.cfg-inp-lbl { font-size: 10px; font-weight: 600; color: var(–text3); margin-bottom: 5px; letter-spacing: 0.5px; }
+.cfg-inp {
+width: 100%; background: var(–bg); border: 1px solid var(–border);
+border-radius: 8px; padding: 8px 11px; color: var(–text);
+font-family: var(–mono); font-size: 13px; outline: none; transition: border-color 0.2s;
+}
+.cfg-inp:focus { border-color: rgba(240,180,41,0.4); }
+.cfg-note {
+font-size: 11px; color: var(–text3); line-height: 1.7;
+padding: 9px; background: var(–bg); border-radius: 8px; border: 1px solid var(–border);
+}
 
 /* Log */
-.log-list{max-height:250px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
-.log-list::-webkit-scrollbar{width:3px}
-.log-list::-webkit-scrollbar-thumb{background:var(–border-light);border-radius:3px}
-.log-entry{padding:9px 11px;border-radius:8px;border-left:3px solid var(–border);font-size:11px;animation:fadeUp 0.3s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.log-entry.ok{border-left-color:var(–green);background:rgba(34,197,94,0.04)}
-.log-entry.pend{border-left-color:var(–amber);background:rgba(245,158,11,0.04)}
-.log-entry.err{border-left-color:var(–red);background:rgba(239,68,68,0.04)}
-.log-entry.sim{border-left-color:var(–blue);background:rgba(59,130,246,0.04)}
-.log-time{font-size:10px;color:var(–text3);font-family:var(–mono);margin-bottom:2px}
-.log-msg{color:var(–text2);line-height:1.4}
-.log-hash{font-size:10px;color:var(–gold);cursor:pointer;font-family:var(–mono);margin-top:2px;word-break:break-all}
-.log-hash:hover{color:var(–gold2)}
-.log-empty{font-size:12px;color:var(–text3);text-align:center;padding:20px 0}
+.log-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.log-list::-webkit-scrollbar { width: 3px; }
+.log-list::-webkit-scrollbar-thumb { background: var(–border); border-radius: 3px; }
+.log-entry {
+padding: 9px 11px; border-radius: 9px; border-left: 3px solid var(–border);
+font-size: 11px; line-height: 1.5; animation: fadeUp 0.3s ease;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.log-entry.ok   { border-left-color: var(–green); background: rgba(62,207,142,0.04); }
+.log-entry.pend { border-left-color: var(–amber); background: rgba(245,158,11,0.04); }
+.log-entry.err  { border-left-color: var(–red);   background: rgba(240,64,64,0.04); }
+.log-entry.sim  { border-left-color: var(–blue);  background: rgba(78,142,247,0.04); }
+.log-time { font-size: 10px; color: var(–text3); font-family: var(–mono); margin-bottom: 2px; }
+.log-msg  { color: var(–text2); }
+.log-hash { font-size: 10px; color: var(–gold); cursor: pointer; font-family: var(–mono); margin-top: 3px; word-break: break-all; }
+.log-empty { font-size: 12px; color: var(–text3); text-align: center; padding: 20px 0; }
 
 /* ── TOKEN MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(12,12,15,0.85);backdrop-filter:blur(8px);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
-.overlay.open{opacity:1;pointer-events:all}
-.modal{background:var(–card);border:1px solid var(–border-light);border-radius:16px;padding:22px;width:400px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.5);transform:translateY(10px);transition:transform 0.2s}
-.overlay.open .modal{transform:translateY(0)}
-.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.modal-title{font-size:15px;font-weight:600;color:var(–text)}
-.btn-close{background:none;border:none;color:var(–text3);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:5px}
-.btn-close:hover{color:var(–text);background:var(–border)}
-.tok-search-input{width:100%;background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px 13px;color:var(–text);font-family:var(–sans);font-size:13px;outline:none;margin-bottom:12px;transition:border-color 0.2s}
-.tok-search-input:focus{border-color:rgba(245,200,66,0.4)}
-.tok-cats{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
-.tok-cat-btn{padding:4px 11px;border-radius:6px;border:1px solid var(–border);background:transparent;color:var(–text3);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.2s}
-.tok-cat-btn:hover{border-color:var(–gold);color:var(–gold)}
-.tok-cat-btn.active{border-color:var(–gold);background:var(–gold-dim);color:var(–gold)}
-.tok-items{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:3px}
-.tok-items::-webkit-scrollbar{width:3px}
-.tok-items::-webkit-scrollbar-thumb{background:var(–border-light);border-radius:3px}
-.tok-item{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:9px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
-.tok-item:hover{background:var(–surface);border-color:var(–border)}
-.tok-item.sel{background:var(–gold-dim);border-color:rgba(245,200,66,0.25)}
-.ti-icon{font-size:22px;width:30px;text-align:center;flex-shrink:0}
-.ti-info{flex:1;min-width:0}
-.ti-sym{font-size:13px;font-weight:600;color:var(–text)}
-.ti-name{font-size:11px;color:var(–text3);margin-top:1px}
-.ti-addr{font-size:9px;color:var(–text3);font-family:var(–mono);margin-top:1px}
-.ti-warn{font-size:9px;color:var(–amber);margin-top:2px}
-.ti-price{font-size:10px;color:var(–gold);font-family:var(–mono)}
-.ti-tag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:0.5px}
-.tag-stable{background:var(–green-dim);color:var(–green)}
-.tag-meme{background:rgba(245,200,66,0.1);color:var(–gold)}
-.tag-custom{background:rgba(59,130,246,0.1);color:var(–blue)}
-.import-wrap{margin-top:12px;padding-top:12px;border-top:1px solid var(–border)}
-.import-label{font-size:10px;font-weight:600;color:var(–text3);margin-bottom:7px;letter-spacing:0.5px}
-.import-row{display:flex;gap:7px}
-.import-input{flex:1;background:var(–surface);border:1px solid var(–border);border-radius:7px;padding:8px 10px;color:var(–text);font-family:var(–mono);font-size:11px;outline:none}
-.import-input:focus{border-color:rgba(245,200,66,0.4)}
-.btn-import{padding:8px 14px;border-radius:7px;border:1px solid rgba(245,200,66,0.4);background:transparent;color:var(–gold);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.2s}
-.btn-import:hover{background:var(–gold-dim)}
-.import-msg{font-size:10px;color:var(–text3);margin-top:6px;min-height:14px}
+.overlay {
+position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+backdrop-filter: blur(8px); z-index: 500;
+display: flex; align-items: flex-end; justify-content: center;
+opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.sheet {
+background: #1a1a1a; border-radius: 20px 20px 0 0;
+width: 100%; max-width: 480px; max-height: 85vh;
+display: flex; flex-direction: column;
+padding: 20px 16px 32px;
+transform: translateY(20px); transition: transform 0.25s;
+}
+.overlay.open .sheet { transform: translateY(0); }
+.sheet-handle { width: 40px; height: 4px; background: var(–border); border-radius: 2px; margin: 0 auto 18px; }
+.sheet-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(–text); }
 
-/* ── WALLET MODAL ── */
-.wallet-options{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
-.wallet-opt{display:flex;align-items:center;gap:13px;padding:12px 13px;border-radius:10px;border:1px solid var(–border);background:var(–surface);cursor:pointer;transition:all 0.2s}
-.wallet-opt:hover{border-color:var(–gold);background:var(–gold-dim)}
-.wopt-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(–card)}
-.wopt-name{font-size:13px;font-weight:600;color:var(–text)}
-.wopt-desc{font-size:11px;color:var(–text3);margin-top:1px}
-.btn-addnet{width:100%;padding:10px;border-radius:9px;border:1px dashed var(–border-light);background:transparent;color:var(–gold);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px}
-.btn-addnet:hover{border-color:var(–gold);background:var(–gold-dim)}
+/* Wallet modal — centered */
+.modal-center {
+background: var(–card); border: 1px solid var(–border);
+border-radius: 16px; width: calc(100% - 32px); max-width: 380px;
+padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+transform: translateY(10px); transition: transform 0.2s;
+position: relative;
+}
+.overlay.open .modal-center { transform: translateY(0); }
+.modal-center .overlay { align-items: center; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-title { font-size: 15px; font-weight: 600; color: var(–text); }
+.btn-close { background: none; border: none; color: var(–text3); font-size: 18px; cursor: pointer; padding: 2px 5px; border-radius: 5px; }
+.btn-close:hover { background: var(–border); color: var(–text); }
 
-/* ── PROCESSING OVERLAY ── */
-.proc-overlay{position:fixed;inset:0;background:rgba(12,12,15,0.9);backdrop-filter:blur(10px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
-.proc-overlay.show{opacity:1;pointer-events:all}
-.proc-card{background:var(–card);border:1px solid var(–gold2);border-radius:16px;padding:36px 32px;text-align:center;min-width:300px;box-shadow:0 0 60px rgba(245,200,66,0.12)}
-.proc-ring{width:48px;height:48px;margin:0 auto 20px;border:3px solid var(–border-light);border-top-color:var(–gold);border-radius:50%;animation:spin 0.8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.proc-title{font-size:16px;font-weight:700;color:var(–gold);margin-bottom:14px}
-.proc-steps{display:flex;flex-direction:column;gap:5px;text-align:left}
-.pstep{font-size:12px;color:var(–text3);padding:5px 10px;border-radius:6px;transition:all 0.3s;font-family:var(–mono)}
-.pstep.active{color:var(–gold);background:var(–gold-dim)}
-.pstep.done{color:var(–green)}
-.proc-shield{font-size:10px;color:var(–text3);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:5px}
-.shield-dot{width:5px;height:5px;border-radius:50%;background:var(–gold);animation:pulse2 0.8s ease-in-out infinite}
+.tok-search {
+width: 100%; background: var(–bg); border: 1px solid var(–border);
+border-radius: 9px; padding: 11px 13px; color: var(–text);
+font-family: ‘Inter’, sans-serif; font-size: 13px; outline: none; margin-bottom: 12px;
+}
+.tok-search:focus { border-color: rgba(240,180,41,0.4); }
+.cat-row { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+.cat-btn {
+padding: 4px 11px; border-radius: 6px; border: 1px solid var(–border);
+background: transparent; color: var(–text3); font-size: 11px; font-weight: 500;
+cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
+}
+.cat-btn:hover { border-color: var(–gold); color: var(–gold); }
+.cat-btn.active { border-color: var(–gold); background: var(–golddim); color: var(–gold); }
+.tok-items { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.tok-items::-webkit-scrollbar { width: 3px; }
+.tok-items::-webkit-scrollbar-thumb { background: var(–border); border-radius: 3px; }
+.tok-item {
+display: flex; align-items: center; gap: 11px;
+padding: 11px 12px; border-radius: 10px; cursor: pointer;
+transition: background 0.15s; border: 1px solid transparent;
+}
+.tok-item:hover { background: var(–card2); border-color: var(–border); }
+.tok-item.sel { background: var(–golddim); border-color: rgba(240,180,41,0.3); }
+.ti-icon { font-size: 24px; width: 32px; text-align: center; flex-shrink: 0; }
+.ti-info { flex: 1; min-width: 0; }
+.ti-sym  { font-size: 14px; font-weight: 600; color: var(–text); }
+.ti-name { font-size: 11px; color: var(–text3); margin-top: 1px; }
+.ti-addr { font-size: 9px; color: var(–text3); font-family: var(–mono); margin-top: 2px; }
+.ti-warn { font-size: 9px; color: var(–amber); margin-top: 2px; }
+.ti-price { font-size: 10px; color: var(–gold); font-family: var(–mono); margin-left: 4px; }
+.ti-tag  { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 5px; letter-spacing: 0.3px; flex-shrink: 0; }
+.tag-stable { background: rgba(62,207,142,0.1);  color: var(–green); }
+.tag-meme   { background: rgba(240,180,41,0.1);  color: var(–gold); }
+.tag-custom { background: rgba(78,142,247,0.1);  color: var(–blue); }
 
-.hidden{display:none!important}
+.import-wrap { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(–border); }
+.import-lbl  { font-size: 10px; font-weight: 600; color: var(–text3); margin-bottom: 7px; letter-spacing: 0.5px; }
+.import-row  { display: flex; gap: 7px; }
+.import-inp  {
+flex: 1; background: var(–bg); border: 1px solid var(–border);
+border-radius: 8px; padding: 8px 11px; color: var(–text);
+font-family: var(–mono); font-size: 11px; outline: none;
+}
+.import-inp:focus { border-color: rgba(240,180,41,0.4); }
+.btn-import {
+padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(240,180,41,0.4);
+background: transparent; color: var(–gold); font-size: 11px; font-weight: 500;
+cursor: pointer; white-space: nowrap; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
+}
+.btn-import:hover { background: var(–golddim); }
+.import-msg { font-size: 10px; color: var(–text3); margin-top: 6px; min-height: 14px; }
+
+/* Wallet options */
+.w-options { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.w-opt {
+display: flex; align-items: center; gap: 13px;
+padding: 12px 13px; border-radius: 11px;
+border: 1px solid var(–border); background: var(–bg);
+cursor: pointer; transition: all 0.2s;
+}
+.w-opt:hover { border-color: var(–gold); background: var(–golddim); }
+.w-icon { width: 36px; height: 36px; border-radius: 9px; background: var(–card2); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.w-name { font-size: 13px; font-weight: 600; color: var(–text); }
+.w-desc { font-size: 11px; color: var(–text3); margin-top: 1px; }
+.btn-addnet {
+width: 100%; padding: 10px; border-radius: 9px;
+border: 1px dashed rgba(240,180,41,0.3); background: transparent;
+color: var(–gold); font-size: 12px; font-weight: 500;
+cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
+}
+.btn-addnet:hover { border-color: var(–gold); background: var(–golddim); }
+
+/* ── PROCESSING ── */
+.proc-overlay {
+position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+backdrop-filter: blur(10px); z-index: 600;
+display: flex; align-items: center; justify-content: center;
+opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.proc-overlay.show { opacity: 1; pointer-events: all; }
+.proc-card {
+background: var(–card); border: 1px solid rgba(240,180,41,0.3);
+border-radius: 18px; padding: 32px 28px; text-align: center;
+min-width: 280px; max-width: 320px; width: 90%;
+box-shadow: 0 0 50px rgba(240,180,41,0.1);
+}
+.proc-ring {
+width: 46px; height: 46px; margin: 0 auto 18px;
+border: 3px solid var(–border); border-top-color: var(–gold);
+border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-title { font-size: 15px; font-weight: 700; color: var(–gold); margin-bottom: 14px; }
+.proc-steps { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.pstep { font-size: 12px; color: var(–text3); padding: 5px 10px; border-radius: 6px; transition: all 0.3s; font-family: var(–mono); }
+.pstep.active { color: var(–gold); background: var(–golddim); }
+.pstep.done   { color: var(–green); }
+.proc-shield  { font-size: 10px; color: var(–text3); margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.shield-dot   { width: 5px; height: 5px; border-radius: 50%; background: var(–gold); animation: blink 0.8s infinite; }
+
+.hidden { display: none !important; }
+
+/* Batch preset buttons */
+.batch-preset {
+padding: 6px 14px; border-radius: 8px; border: 1px solid var(–border);
+background: var(–bg); color: var(–text2); font-size: 12px; font-weight: 500;
+cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
+}
+.batch-preset:hover { border-color: var(–gold); color: var(–gold); }
+.batch-preset.active { border-color: var(–gold); background: var(–golddim); color: var(–gold); font-weight: 600; }
 </style>
 
 </head>
 <body>
 
-<!-- TOKEN MODAL -->
+<!-- TOKEN SELECT SHEET -->
 
 <div class="overlay" id="tokModal">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">Select Token</div>
-      <button class="btn-close" onclick="closeTokModal()">✕</button>
-    </div>
-    <input class="tok-search-input" id="tokSearch" placeholder="Search name, symbol or paste address…" oninput="renderTokList()"/>
-    <div class="tok-cats">
-      <button class="tok-cat-btn active" onclick="filterCat('all',this)">All</button>
-      <button class="tok-cat-btn" onclick="filterCat('stable',this)">Stablecoins</button>
-      <button class="tok-cat-btn" onclick="filterCat('meme',this)">Memecoins 🐸</button>
-      <button class="tok-cat-btn" onclick="filterCat('custom',this)">Custom</button>
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Select Token</div>
+    <input class="tok-search" id="tokSearch" placeholder="Search name, symbol or paste 0x address…" oninput="renderTokList()"/>
+    <div class="cat-row">
+      <button class="cat-btn active" onclick="filterCat('all',this)">All</button>
+      <button class="cat-btn" onclick="filterCat('stable',this)">Stablecoins</button>
+      <button class="cat-btn" onclick="filterCat('meme',this)">Memecoins 🐸</button>
+      <button class="cat-btn" onclick="filterCat('custom',this)">Custom</button>
     </div>
     <div class="tok-items" id="tokList"></div>
     <div class="import-wrap">
-      <div class="import-label">IMPORT CUSTOM TOKEN</div>
+      <div class="import-lbl">IMPORT CUSTOM TOKEN</div>
       <div class="import-row">
-        <input class="import-input" id="importAddr" placeholder="0x... contract address on Arc Testnet"/>
+        <input class="import-inp" id="importAddr" placeholder="0x… contract on Arc Testnet"/>
         <button class="btn-import" onclick="importCustomToken()">Import</button>
       </div>
-      <div class="import-msg" id="importStatus">Paste any ERC-20 address deployed on Arc Testnet</div>
+      <div class="import-msg" id="importStatus">Paste any ERC-20 address on Arc Testnet</div>
     </div>
   </div>
 </div>
 
 <!-- WALLET MODAL -->
 
-<div class="overlay" id="walletModal">
-  <div class="modal" style="max-height:auto">
+<div class="overlay" id="walletModal" style="align-items:center">
+  <div class="modal-center">
     <div class="modal-head">
       <div class="modal-title">Connect Wallet</div>
       <button class="btn-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="wallet-options">
-      <div class="wallet-opt" onclick="connectInjected('metamask')">
-        <div class="wopt-icon">🦊</div>
-        <div><div class="wopt-name">MetaMask</div><div class="wopt-desc">Browser extension wallet</div></div>
+    <div class="w-options">
+      <div class="w-opt" onclick="connectInjected('metamask')">
+        <div class="w-icon">🦊</div>
+        <div><div class="w-name">MetaMask</div><div class="w-desc">Browser extension</div></div>
       </div>
-      <div class="wallet-opt" onclick="connectInjected('zerion')">
-        <div class="wopt-icon">💎</div>
-        <div><div class="wopt-name">Zerion</div><div class="wopt-desc">Smart wallet for DeFi</div></div>
+      <div class="w-opt" onclick="connectInjected('zerion')">
+        <div class="w-icon">💎</div>
+        <div><div class="w-name">Zerion</div><div class="w-desc">Smart DeFi wallet</div></div>
       </div>
-      <div class="wallet-opt" onclick="connectInjected('coinbase')">
-        <div class="wopt-icon">🔵</div>
-        <div><div class="wopt-name">Coinbase Wallet</div><div class="wopt-desc">Self-custody crypto wallet</div></div>
+      <div class="w-opt" onclick="connectInjected('coinbase')">
+        <div class="w-icon">🔵</div>
+        <div><div class="w-name">Coinbase Wallet</div><div class="w-desc">Self-custody wallet</div></div>
       </div>
-      <div class="wallet-opt" onclick="connectInjected('rabby')">
-        <div class="wopt-icon">🐰</div>
-        <div><div class="wopt-name">Rabby / Any Injected</div><div class="wopt-desc">Any EIP-1193 wallet</div></div>
+      <div class="w-opt" onclick="connectInjected('rabby')">
+        <div class="w-icon">🐰</div>
+        <div><div class="w-name">Rabby / Other</div><div class="w-desc">Any EIP-1193 wallet</div></div>
       </div>
-      <div class="wallet-opt" onclick="connectWalletConnect()">
-        <div class="wopt-icon">📱</div>
-        <div><div class="wopt-name">WalletConnect</div><div class="wopt-desc">Mobile wallets via QR</div></div>
+      <div class="w-opt" onclick="connectWalletConnect()">
+        <div class="w-icon">📱</div>
+        <div><div class="w-name">WalletConnect</div><div class="w-desc">Mobile via QR code</div></div>
       </div>
     </div>
     <button class="btn-addnet" onclick="addArcNetwork()">⚡ Add Arc Testnet to Wallet</button>
@@ -436,182 +514,291 @@ position:relative;overflow:hidden;
   </div>
 </div>
 
-<div class="app">
+<!-- ══════════════ PAGE ══════════════ -->
 
-<!-- TOPBAR -->
+<div class="page">
 
-<div class="topbar">
-  <div class="brand">
-    <div class="brand-icon">⚡</div>
-    <div>
-      <div class="brand-name">ARC BOT</div>
-      <div class="brand-tag">SWAP · BRIDGE · AUTO-EXECUTE · ARC TESTNET</div>
+  <!-- HEADER -->
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-name">ARC BOT</div>
+        <div class="logo-sub">ARC TESTNET · CHAIN 5042002</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-wallet" id="walletBtn" onclick="openModal()">
+        🔌 <span id="walletBtnTxt">Connect</span>
+      </button>
+      <button class="btn-wallet danger hidden" id="disconnectBtn" onclick="disconnectWallet()">
+        Disconnect
+      </button>
     </div>
   </div>
-  <div class="topbar-right">
-    <div class="mode-pill">
-      <button class="mpb active" id="modeSimBtn" onclick="setMode('sim')">⚙ Sim</button>
-      <button class="mpb" id="modeLiveBtn" onclick="setMode('live')">⚡ Live</button>
-    </div>
-    <div class="status-dot sim" id="modeBadge">
-      <div class="sdot"></div>
-      <span id="modeBadgeTxt">Simulation</span>
-    </div>
-    <div id="blockBadge">Block #—</div>
-    <button class="btn-connect" id="walletBtn" onclick="openModal()">
-      🔌 <span id="walletBtnTxt">Connect Wallet</span>
-    </button>
-    <button class="btn-disconnect hidden" id="disconnectBtn" onclick="disconnectWallet()">
-      ⏏ Disconnect
-    </button>
+
+  <!-- STATUS BAR -->
+
+  <div class="status-bar"><div class="sb-item" id="blockBadge">Block #—</div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">Wallet: <b id="walletShort">—</b></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item">USDC: <b id="usdcBalDisp">—</b></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item"><a href="https://testnet.arcscan.app" target="_blank">Explorer ↗</a></div>
   </div>
-</div>
+  </div>
 
-<!-- NET BAR -->
+  <!-- ARC DEX NOTICE -->
 
-<div class="netbar">
-  <div class="nchip">Chain <strong>5042002</strong></div>
-  <div class="nsep"></div>
-  <div class="nchip">RPC <strong>rpc.testnet.arc.network</strong></div>
-  <div class="nsep"></div>
-  <div class="nchip">Gas <strong>USDC</strong></div>
-  <div class="nsep"></div>
-  <div class="nchip">Explorer <a href="https://testnet.arcscan.app" target="_blank">arcscan.app ↗</a></div>
-  <div class="nsep"></div>
-  <div class="nchip" id="walletChip">Wallet <strong>Not Connected</strong></div>
-  <div class="nsep"></div>
-  <div class="nchip">Balance <strong id="usdcBalDisp">—</strong></div>
-</div>
+  <div class="notice warn" id="dexNotice">
+    <span class="notice-icon">ℹ️</span>
+    <div class="notice-text"><strong>No public DEX on Arc Testnet yet.</strong> Token Transfer sends your FROM token to the TO token's contract address — real onchain tx with different from/to addresses.</div>
+  </div>
 
-<!-- SIM BANNER -->
+  <!-- MAIN CARD: ACTIVITY + BRIDGE -->
 
-<div class="sim-banner" id="simBanner">
-  <span>⚙</span>
-  <div class="sim-banner-txt"><strong>Simulation Mode</strong> — Transactions are simulated. No real wallet needed. Switch to Live for real onchain execution.</div>
-  <button class="btn-golive" onclick="setMode('live')">Go Live →</button>
-</div>
-
-<div class="grid">
-
-<!-- LEFT -->
-
-<div>
-  <div class="card">
+  <div class="main-card">
     <div class="tabs">
-      <button class="tab active" id="tabSwap" onclick="switchTab('swap')">⇌ Swap</button>
-      <button class="tab" id="tabBridge" onclick="switchTab('bridge')">⛓ Bridge</button>
+      <button class="tab-btn active" id="tabSwap" onclick="switchTab('swap')">Activity Tx</button>
+      <button class="tab-btn" id="tabBridge" onclick="switchTab('bridge')">Bridge USDC</button>
+      <button class="tab-btn" id="tabBot" onclick="switchTab('bot')">Auto-Bot</button>
     </div>
 
 ```
-<!-- SWAP PANEL -->
+<!-- ACTIVITY PANEL -->
 <div id="swapPanel">
-  <div class="tok-panel">
-    <div class="tok-label">FROM</div>
-    <div class="tok-row">
-      <div class="tok-btn" onclick="openTokModal('from')" id="fromPicker">
-        <span class="tok-emoji" id="fromEmoji">💵</span>
+
+  <!-- FROM -->
+  <div class="tok-box">
+    <div class="tok-lbl">FROM</div>
+    <div class="tok-inner">
+      <div class="tok-select-btn" onclick="openTokModal('from')" id="fromPicker">
+        <span class="t-emoji" id="fromEmoji">💵</span>
         <div>
-          <div class="tok-sym" id="fromSymDisp">USDC</div>
-          <div class="tok-sub" id="fromNameDisp">USD Coin</div>
+          <div class="t-sym" id="fromSymDisp">USDC</div>
+          <div class="t-name" id="fromNameDisp">USD Coin</div>
         </div>
-        <span class="tok-caret">▾</span>
+        <span class="t-caret">▾</span>
       </div>
-      <input class="amt-field" id="fromAmt" type="number" step="any" placeholder="0.00" oninput="fetchQuote()"/>
+      <input class="tok-amount" id="fromAmt" type="number" step="any" placeholder="0.00" oninput="fetchQuote()"/>
     </div>
     <div class="tok-footer">
-      <div class="tok-bal">Balance: <strong id="fromBal">—</strong></div>
+      <div class="tok-bal">Balance: <b id="fromBal">—</b></div>
       <button class="btn-max" onclick="setMax()">MAX</button>
     </div>
   </div>
 
-  <div class="flip-wrap">
-    <div class="btn-flip" onclick="flipPair()">⇅</div>
+  <!-- Arrow -->
+  <div class="swap-arrow-wrap">
+    <div class="swap-arrow-btn" onclick="flipPair()">⇅</div>
   </div>
 
-  <div class="tok-panel">
-    <div class="tok-label">TO (Estimated)</div>
-    <div class="tok-row">
-      <div class="tok-btn" onclick="openTokModal('to')" id="toPicker">
-        <span class="tok-emoji" id="toEmoji">💶</span>
+  <!-- TO -->
+  <div class="tok-box">
+    <div class="tok-lbl">TO (sends to this token's contract)</div>
+    <div class="tok-inner">
+      <div class="tok-select-btn" onclick="openTokModal('to')" id="toPicker">
+        <span class="t-emoji" id="toEmoji">💶</span>
         <div>
-          <div class="tok-sym" id="toSymDisp">EURC</div>
-          <div class="tok-sub" id="toNameDisp">Euro Coin</div>
+          <div class="t-sym" id="toSymDisp">EURC</div>
+          <div class="t-name" id="toNameDisp">Euro Coin</div>
         </div>
-        <span class="tok-caret">▾</span>
+        <span class="t-caret">▾</span>
       </div>
-      <input class="amt-field" id="toAmt" type="number" step="any" placeholder="0.00" readonly/>
+      <input class="tok-amount" id="toAmt" type="number" step="any" placeholder="0.00" readonly/>
     </div>
     <div class="tok-footer">
-      <div class="tok-bal">Balance: <strong id="toBal">—</strong></div>
+      <div class="tok-bal">Balance: <b id="toBal">—</b></div>
     </div>
   </div>
 
+  <!-- Hidden inputs for JS compatibility -->
   <input type="hidden" id="fromToken" value="USDC">
   <input type="hidden" id="toToken" value="EURC">
 
-  <div class="slip-row">
-    <span class="slip-lbl">Slippage</span>
-    <button class="slip-btn active" onclick="setSlip(0.1,this)">0.1%</button>
-    <button class="slip-btn" onclick="setSlip(0.5,this)">0.5%</button>
-    <button class="slip-btn" onclick="setSlip(1.0,this)">1.0%</button>
+  <!-- Slippage -->
+  <div class="slip-wrap">
+    <span class="slip-label">Slippage</span>
+    <button class="slip-opt active" onclick="setSlip(0.1,this)">0.1%</button>
+    <button class="slip-opt" onclick="setSlip(0.5,this)">0.5%</button>
+    <button class="slip-opt" onclick="setSlip(1.0,this)">1.0%</button>
   </div>
 
-  <div class="info-table">
-    <div class="info-row"><span class="info-k">Rate</span><span class="info-v" id="rateDisp">—</span></div>
-    <div class="info-row"><span class="info-k">Price Impact</span><span class="info-v green" id="impactDisp">< 0.01%</span></div>
-    <div class="info-row"><span class="info-k">Gas (USDC)</span><span class="info-v" id="gasDisp">~0.001</span></div>
-    <div class="info-row"><span class="info-k">Min Received</span><span class="info-v" id="minRecDisp">—</span></div>
-    <div class="info-row"><span class="info-k">Mode</span><span class="info-v amber" id="modeDisp">SIMULATION</span></div>
-    <div class="info-row"><span class="info-k">Anti-Bot Jitter</span><span class="info-v gold" id="abDelayDisp">2–6s</span></div>
+  <div class="details">
+    <div class="detail-row"><span class="dk">Rate</span><span class="dv" id="rateDisp">—</span></div>
+    <div class="detail-row"><span class="dk">You Send</span><span class="dv" id="sendAmtDisp">—</span></div>
+    <div class="detail-row"><span class="dk">Recipient</span><span class="dv gold" id="recipientDisp">TO token contract</span></div>
+    <div class="detail-row"><span class="dk">Gas Fee</span><span class="dv gold">~0.001 USDC</span></div>
+    <div class="detail-row"><span class="dk">Anti-Bot Jitter</span><span class="dv gold" id="abDelayDisp">2–6s</span></div>
+    <div class="detail-row"><span class="dk">ℹ️ Note</span><span class="dv" style="color:var(--amber);font-size:10px;font-family:'Inter',sans-serif">Sends FROM token to TO contract · No DEX on Arc Testnet</span></div>
   </div>
 
-  <button class="btn-exec" id="swapBtn" onclick="executeSwap()">⚡ Execute Swap</button>
-  <div class="exec-note" id="swapNote">Simulation mode · No wallet needed</div>
+  <button class="btn-exec" id="swapBtn" onclick="executeSwap()">⚡ Send Token Transfer</button>
+  <div class="exec-sub" id="swapNote">Sends FROM token to the TO token's contract address on Arc</div>
 </div>
 
 <!-- BRIDGE PANEL -->
 <div id="bridgePanel" class="hidden">
   <div class="chain-row">
-    <select class="chain-sel" id="srcChain">
+    <select class="chain-pick" id="srcChain">
       <option value="11155111">Ethereum Sepolia</option>
       <option value="84532">Base Sepolia</option>
       <option value="43113">Avalanche Fuji</option>
       <option value="421614">Arbitrum Sepolia</option>
     </select>
-    <span class="chain-arrow">→</span>
-    <select class="chain-sel" id="dstChain">
+    <span class="chain-sep">→</span>
+    <select class="chain-pick" id="dstChain">
       <option value="5042002">Arc Testnet</option>
     </select>
   </div>
 
-  <div class="tok-panel">
-    <div class="tok-label">AMOUNT</div>
-    <div class="tok-row">
-      <div class="tok-btn" style="min-width:110px;cursor:default">
-        <span class="tok-emoji">💵</span>
-        <div><div class="tok-sym">USDC</div><div class="tok-sub">USD Coin</div></div>
+  <div class="tok-box">
+    <div class="tok-lbl">AMOUNT (USDC)</div>
+    <div class="tok-inner">
+      <div class="tok-select-btn" style="cursor:default;min-width:100px">
+        <span class="t-emoji">💵</span>
+        <div><div class="t-sym">USDC</div><div class="t-name">USD Coin</div></div>
       </div>
-      <input class="amt-field" id="bridgeAmt" type="number" step="any" placeholder="0.00" oninput="updateBridgeQuote()"/>
+      <input class="tok-amount" id="bridgeAmt" type="number" step="any" placeholder="0.00" oninput="updateBridgeQuote()"/>
     </div>
     <div class="tok-footer">
-      <div class="tok-bal">Balance: <strong id="bridgeBal">—</strong></div>
+      <div class="tok-bal">Balance: <b id="bridgeBal">—</b></div>
       <button class="btn-max" onclick="setBridgeMax()">MAX</button>
     </div>
   </div>
 
-  <div class="info-table" style="margin-top:14px">
-    <div class="info-row"><span class="info-k">Protocol</span><span class="info-v">Circle CCTP v2</span></div>
-    <div class="info-row"><span class="info-k">Arc Domain</span><span class="info-v">26</span></div>
-    <div class="info-row"><span class="info-k">Bridge Fee</span><span class="info-v">~0.05 USDC</span></div>
-    <div class="info-row"><span class="info-k">Finality</span><span class="info-v green">Sub-second on Arc</span></div>
-    <div class="info-row"><span class="info-k">You Receive</span><span class="info-v" id="bridgeRecvDisp">—</span></div>
-    <div class="info-row"><span class="info-k">Mode</span><span class="info-v amber" id="bridgeModeDisp">SIMULATION</span></div>
+  <div class="details" style="margin-top:14px">
+    <div class="detail-row"><span class="dk">Protocol</span><span class="dv">Circle CCTP v2</span></div>
+    <div class="detail-row"><span class="dk">Arc Domain</span><span class="dv">26</span></div>
+    <div class="detail-row"><span class="dk">Bridge Fee</span><span class="dv">~0.05 USDC</span></div>
+    <div class="detail-row"><span class="dk">You Receive</span><span class="dv green" id="bridgeRecvDisp">—</span></div>
+    <div class="detail-row"><span class="dk">Finality</span><span class="dv green">Sub-second on Arc</span></div>
+    </div>
+
+  <button class="btn-exec" id="bridgeBtn" onclick="executeBridge()">⛓ Bridge to Arc Testnet</button>
+  <div class="exec-sub" id="bridgeNote">Real CCTP bridge · Approve → Burn → Mint on Arc</div>
+</div>
+
+<!-- AUTO-BOT PANEL -->
+<div id="botPanel" class="hidden">
+
+  <!-- ── BATCH SWAPS ── -->
+  <div style="margin-bottom:18px">
+    <div class="sec-title" style="margin-bottom:12px">⚡ BATCH SWAPS</div>
+
+    <!-- Batch count presets -->
+    <div style="margin-bottom:10px">
+      <div class="cfg-inp-lbl" style="margin-bottom:7px">NUMBER OF SWAPS</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="batch-preset active" onclick="setBatchCount(5,this)">5 swaps</button>
+        <button class="batch-preset" onclick="setBatchCount(10,this)">10 swaps</button>
+        <button class="batch-preset" onclick="setBatchCount(20,this)">20 swaps</button>
+        <button class="batch-preset" onclick="setBatchCount(50,this)">50 swaps</button>
+      </div>
+      <input class="cfg-inp" id="batchCount" type="number" value="5" min="1" max="200" placeholder="Custom number"/>
+    </div>
+
+    <!-- Delay range -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div class="cfg-inp-lbl">MIN DELAY (SEC)</div>
+        <input class="cfg-inp" id="batchMinDelay" type="number" value="10" min="3" max="3600"/>
+      </div>
+      <div>
+        <div class="cfg-inp-lbl">MAX DELAY (SEC)</div>
+        <input class="cfg-inp" id="batchMaxDelay" type="number" value="60" min="3" max="3600"/>
+      </div>
+    </div>
+
+    <!-- Amount -->
+    <div style="margin-bottom:10px">
+      <div class="cfg-inp-lbl">AMOUNT PER SWAP (USDC)</div>
+      <input class="cfg-inp" id="batchAmt" type="number" value="0.01" min="0.001" step="0.001"/>
+    </div>
+
+    <!-- Type -->
+    <div style="margin-bottom:12px">
+      <div class="cfg-inp-lbl">SWAP TYPE</div>
+      <div style="display:flex;gap:7px;margin-top:6px">
+        <button class="batch-preset active" id="bTypeSwap" onclick="setBatchType('swap',this)">Token Transfer</button>
+        <button class="batch-preset" id="bTypeBridge" onclick="setBatchType('bridge',this)">Bridge</button>
+        <button class="batch-preset" id="bTypeMix" onclick="setBatchType('mix',this)">Mix Both</button>
+      </div>
+    </div>
+
+    <!-- Batch progress -->
+    <div id="batchProgress" style="display:none;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--text2)" id="batchStatusTxt">Running…</span>
+        <span style="font-size:12px;font-family:var(--mono);color:var(--gold)" id="batchCountTxt">0 / 0</span>
+      </div>
+      <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;border:1px solid var(--border)">
+        <div id="batchBar" style="height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;width:0%;transition:width 0.4s ease"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px" id="batchNextTxt">—</div>
+    </div>
+
+    <!-- Start/Stop buttons -->
+    <button class="btn-exec" id="batchStartBtn" onclick="startBatch()" style="margin-bottom:8px">
+      ▶ Start Batch Swaps
+    </button>
+    <button class="btn-exec hidden" id="batchStopBtn" onclick="stopBatch()" style="background:linear-gradient(135deg,#c0392b,#922b21);margin-bottom:8px">
+      ■ Stop Batch
+    </button>
+    <div class="exec-sub">Each swap runs at a random time between min–max delay · Anti-bot shield active</div>
   </div>
 
-  <button class="btn-exec" id="bridgeBtn" onclick="executeBridge()">⛓ Execute Bridge</button>
-  <div class="exec-note" id="bridgeNote">Simulation mode · No wallet needed</div>
+  <div style="height:1px;background:var(--border);margin:4px 0 18px"></div>
+
+  <!-- ── AUTO-BOT (continuous) ── -->
+  <div>
+    <div class="sec-title" style="margin-bottom:12px">🔄 CONTINUOUS AUTO-BOT</div>
+    <div class="config-rows">
+      <div class="cfg-row"><span class="cfg-lbl">Auto-Execute</span><button class="toggle" id="togAuto" onclick="toggleAuto()"></button></div>
+      <div class="cfg-row"><span class="cfg-lbl">Random Amounts</span><button class="toggle on" id="togRand" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-row"><span class="cfg-lbl">Alternate Swap/Bridge</span><button class="toggle on" id="togAlt" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-row"><span class="cfg-lbl">Gas Randomize</span><button class="toggle on" id="togGas" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-row"><span class="cfg-lbl">Human Timing Jitter</span><button class="toggle on" id="togJitter" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-inp-wrap"><div class="cfg-inp-lbl">INTERVAL (SECONDS)</div><input class="cfg-inp" id="intervalSec" type="number" value="45" min="10"/></div>
+      <div class="cfg-inp-wrap"><div class="cfg-inp-lbl">JITTER RANGE (±SEC)</div><input class="cfg-inp" id="jitterSec" type="number" value="10" min="0"/></div>
+      <div class="cfg-inp-wrap"><div class="cfg-inp-lbl">MAX AMOUNT PER TX</div><input class="cfg-inp" id="maxAmt" type="number" value="5" step="0.1" min="0.01"/></div>
+      <div class="cfg-inp-wrap"><div class="cfg-inp-lbl">MAX RUNS (0 = ∞)</div><input class="cfg-inp" id="maxRuns" type="number" value="0" min="0"/></div>
+      <div class="cfg-note">🛡 Anti-Bot: Gas variance · Nonce spacing · Human-timing jitter · Varied amounts.</div>
+    </div>
+  </div>
+
 </div>
 ```
+
+  </div><!-- end main-card -->
+
+  <!-- STATS -->
+
+  <div class="sec-card">
+    <div class="sec-title">Session Stats</div>
+    <div class="stats-4">
+      <div class="stat-tile"><div class="stat-n" id="stSwaps">0</div><div class="stat-l">ACTIVITY TXS</div></div>
+      <div class="stat-tile"><div class="stat-n" id="stBridges">0</div><div class="stat-l">BRIDGES</div></div>
+      <div class="stat-tile"><div class="stat-n" id="stVol">0</div><div class="stat-l">VOL (USDC)</div></div>
+      <div class="stat-tile"><div class="stat-n" id="stSuccess">—</div><div class="stat-l">SUCCESS %</div></div>
+    </div>
+    <div class="chips">
+      <span class="chip chip-gold">🛡 Anti-Bot</span>
+      <span class="chip chip-gray" id="walletPill">🔌 Disconnected</span></div>
+  </div>
+
+  <!-- ACTIVITY LOG -->
+
+  <div class="sec-card">
+    <div class="sec-title">Activity Log</div>
+    <div class="log-list" id="logWrap">
+      <div class="log-empty">Ready. Connect wallet or use Sim mode to start.</div>
+    </div>
+  </div>
+
+</div><!-- end page -->
 
   </div>
 </div>
@@ -632,9 +819,7 @@ position:relative;overflow:hidden;
     </div>
     <div class="stat-badges">
       <span class="badge badge-gold">🛡 Anti-Bot</span>
-      <span class="badge badge-gray" id="walletPill">🔌 Disconnected</span>
-      <span class="badge badge-gray" id="modePill">⚙ Sim Mode</span>
-    </div>
+      <span class="badge badge-gray" id="walletPill">🔌 Disconnected</span></div>
   </div>
 
   <!-- Auto-bot -->
@@ -747,49 +932,11 @@ function getSwapRate(a, b) {
 // ═══════════════════════════════════════════════
 let provider=null, signer=null, account=null, chainId=null;
 let slippage=0.1, currentTab='swap';
-let isLiveMode = false;
+const true = true; // Sim mode removed
 let autoRunning=false, autoTimer=null, runCount=0;
 let totalSwaps=0, totalBridges=0, totalVol=0, successCount=0, attemptCount=0;
 
-// ═══════════════════════════════════════════════
-// MODE SWITCHING
-// ═══════════════════════════════════════════════
-function setMode(mode) {
-  isLiveMode = mode === 'live';
-  document.getElementById('modeSimBtn').classList.toggle('active', !isLiveMode);
-  document.getElementById('modeLiveBtn').classList.toggle('active', isLiveMode);
 
-  const badge = document.getElementById('modeBadge');
-  badge.className = `mode-badge ${isLiveMode ? 'live' : 'sim'}`;
-  document.getElementById('modeBadgeTxt').textContent = isLiveMode ? 'LIVE ONCHAIN' : 'SIMULATION';
-  document.getElementById('simBanner').classList.toggle('hidden', isLiveMode);
-
-  const modeDisp = isLiveMode ? 'LIVE ONCHAIN' : 'SIMULATION';
-  document.getElementById('modeDisp').textContent = modeDisp;
-  document.getElementById('bridgeModeDisp').textContent = modeDisp;
-  document.getElementById('modeDisp').className = `v ${isLiveMode ? 'g' : 'o'}`;
-  document.getElementById('bridgeModeDisp').className = `v ${isLiveMode ? 'g' : 'o'}`;
-
-  const modePill = document.getElementById('modePill');
-  modePill.textContent = isLiveMode ? '⚡ LIVE MODE' : '⚙ SIM MODE';
-  modePill.style.color = isLiveMode ? 'var(--green)' : 'var(--orange)';
-  modePill.style.borderColor = isLiveMode ? 'rgba(0,255,157,0.3)' : 'rgba(255,123,0,0.3)';
-
-  const swapNote = document.getElementById('swapNote');
-  const bridgeNote = document.getElementById('bridgeNote');
-  if (isLiveMode) {
-    swapNote.textContent = account ? 'Live mode · Real onchain tx' : 'Connect wallet for live execution';
-    bridgeNote.textContent = account ? 'Circle CCTP v2 · Real onchain tx' : 'Connect wallet for live execution';
-    document.getElementById('swapBtn').disabled = !account;
-    document.getElementById('bridgeBtn').disabled = !account;
-  } else {
-    document.getElementById('swapBtn').disabled = false;
-    document.getElementById('bridgeBtn').disabled = false;
-    swapNote.textContent = 'Simulation mode · No wallet needed';
-    bridgeNote.textContent = 'Simulation mode · No wallet needed';
-  }
-  addLog('pend', `Mode switched → ${isLiveMode ? '⚡ LIVE ONCHAIN' : '⚙ SIMULATION'}`);
-}
 
 // ═══════════════════════════════════════════════
 // ANTI-BOT ENGINE
@@ -849,8 +996,8 @@ function addLog(type, msg, hash='') {
   const el = document.createElement('div');
   el.className = `log-entry ${type}`;
   // ONLY show explorer link in live mode with a real hash
-  const showLink = hash && isLiveMode;
-  el.innerHTML = `<div class="log-time">${t}${isLiveMode?' ⚡LIVE':' ⚙SIM'}</div><div class="log-msg">${msg}</div>`
+  const showLink = !!hash;
+  el.innerHTML = `<div class="log-time">${t} ⚡</div><div class="log-msg">${msg}</div>`
     + (showLink ? `<div class="log-hash" onclick="window.open('https://testnet.arcscan.app/tx/${hash}','_blank')">📋 ${hash.slice(0,22)}… (view on explorer)</div>` : '')
     + (!showLink && hash ? `<div class="log-time" style="margin-top:3px;color:var(--text3)">Simulated hash — not real</div>` : '');
   wrap.prepend(el);
@@ -872,31 +1019,73 @@ function closeModal() { document.getElementById('walletModal').classList.remove(
 
 async function connectInjected(hint) {
   closeModal();
-  if (!window.ethereum) { addLog('err',`No wallet detected. Install ${hint==='metamask'?'MetaMask':'your wallet extension'}.`); return; }
+  if (!window.ethereum) {
+    addLog('err', `No wallet detected. Please install ${hint === 'metamask' ? 'MetaMask' : 'your wallet extension'}.`);
+    return;
+  }
   try {
-    addLog('pend',`Connecting ${hint}…`);
+    // Step 1 — Request accounts (shows wallet popup)
+    addLog('pend', `🔌 Requesting account access from ${hint}…`);
     provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send('eth_requestAccounts',[]);
+    await provider.send('eth_requestAccounts', []);
     signer = await provider.getSigner();
-    account = await signer.getAddress();
+    const addr = await signer.getAddress();
+
+    // Step 2 — Require a signature to verify ownership
+    addLog('pend', `✍️ Please sign the message in your wallet to verify ownership…`);
+    const timestamp = Date.now();
+    const message =
+      `Welcome to ARC BOT\n\n` +
+      `Sign this message to verify you own this wallet.\n\n` +
+      `This does NOT trigger any transaction or cost any gas.\n\n` +
+      `Wallet: ${addr}\n` +
+      `Timestamp: ${timestamp}`;
+
+    let signature;
+    try {
+      signature = await signer.signMessage(message);
+    } catch(signErr) {
+      // User rejected the signature
+      provider = null; signer = null;
+      addLog('err', `❌ Signature rejected. Connection cancelled.`);
+      return;
+    }
+
+    // Step 3 — Verify signature matches the address
+    const recovered = ethers.verifyMessage(message, signature);
+    if (recovered.toLowerCase() !== addr.toLowerCase()) {
+      provider = null; signer = null;
+      addLog('err', `❌ Signature verification failed. Connection rejected.`);
+      return;
+    }
+
+    // All good — set state and connect
+    account = addr;
     const net = await provider.getNetwork();
     chainId = Number(net.chainId);
+    addLog('ok', `✅ Signature verified for ${shortAddr(account)}`);
     onConnected();
-  } catch(e) { addLog('err',`Connection failed: ${e.message?.slice(0,60)}`); }
+
+  } catch(e) {
+    provider = null; signer = null;
+    addLog('err', `Connection failed: ${e.message?.slice(0, 80)}`);
+  }
 }
+
 async function connectWalletConnect() {
   closeModal();
   if (window.ethereum) { await connectInjected('walletconnect'); }
-  else addLog('err','WalletConnect requires npm build with @walletconnect/modal. Use MetaMask or Zerion extension for now.');
+  else addLog('err', 'WalletConnect requires npm build with @walletconnect/modal. Use MetaMask or Zerion extension for now.');
 }
 function onConnected() {
   document.getElementById('walletBtn').classList.add('hidden');
   document.getElementById('disconnectBtn').classList.remove('hidden');
   document.getElementById('walletBtnTxt').textContent = shortAddr(account);
   document.getElementById('walletPill').textContent  = '🟢 '+shortAddr(account);
-  document.getElementById('walletChip').querySelector('span').textContent = shortAddr(account);
+  const wc=document.getElementById('walletChip'); if(wc){const s=wc.querySelector('span');if(s)s.textContent=shortAddr(account);}
+  const ws=document.getElementById('walletShort'); if(ws) ws.textContent=shortAddr(account);
   addLog('ok',`Wallet connected: ${account}`);
-  if (isLiveMode) { document.getElementById('swapBtn').disabled=false; document.getElementById('bridgeBtn').disabled=false; }
+  document.getElementById('swapBtn').disabled=false; document.getElementById('bridgeBtn').disabled=false;
   refreshBalances();
   subscribeEvents();
   if (chainId!==ARC.chainIdDec) addLog('pend',`⚠ Not on Arc Testnet (chain ${chainId}). Click "Add Arc Testnet" to switch.`);
@@ -925,12 +1114,13 @@ function disconnectWallet() {
   document.getElementById('disconnectBtn').classList.add('hidden');
   document.getElementById('walletBtnTxt').textContent='CONNECT WALLET';
   document.getElementById('walletPill').textContent='🔌 Disconnected';
-  document.getElementById('walletChip').querySelector('span').textContent='NOT CONNECTED';
+  const wc2=document.getElementById('walletChip');if(wc2){const s=wc2.querySelector('span');if(s)s.textContent='—';}
+  const ws2=document.getElementById('walletShort');if(ws2)ws2.textContent='—';
   document.getElementById('usdcBalDisp').textContent='—';
   document.getElementById('fromBal').textContent='—';
   document.getElementById('toBal').textContent='—';
   document.getElementById('bridgeBal').textContent='—';
-  if(isLiveMode){ document.getElementById('swapBtn').disabled=true; document.getElementById('bridgeBtn').disabled=true; }
+  document.getElementById('swapBtn').disabled=true; document.getElementById('bridgeBtn').disabled=true;
   if(autoRunning){ document.getElementById('togAuto').classList.remove('on'); autoRunning=false; clearTimeout(autoTimer); }
   addLog('pend','Wallet disconnected');
 }
@@ -1014,16 +1204,19 @@ function fetchQuote() {
   const amt=parseFloat(document.getElementById('fromAmt').value)||0;
   const rate=getSwapRate(from,to), out=amt*rate;
   const fromT=getToken(from), toT=getToken(to);
-  document.getElementById('toAmt').value = out>0?out.toFixed(8):'';
-  document.getElementById('rateDisp').textContent = rate<0.001
-    ?`1 ${from} = ${rate.toExponential(4)} ${to}`:`1 ${from} = ${rate.toFixed(6)} ${to}`;
-  document.getElementById('minRecDisp').textContent = out>0?`${(out*(1-slippage/100)).toFixed(8)} ${to}`:'—';
-  const isMeme = fromT?.category==='meme'||toT?.category==='meme';
-  document.getElementById('impactDisp').textContent = isMeme
-    ?(Math.random()*1.5+0.3).toFixed(2)+'%'
-    :amt>500?(Math.random()*0.3+0.05).toFixed(3)+'%':'< 0.01%';
+  const safe=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+  const safeVal=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=val; };
+  safeVal('toAmt', out>0?out.toFixed(8):'');
+  safe('rateDisp', rate<0.001?`1 ${from} = ${rate.toExponential(4)} ${to}`:`1 ${from} = ${rate.toFixed(6)} ${to}`);
+  safe('minRecDisp', out>0?`${(out*(1-slippage/100)).toFixed(8)} ${to}`:'—');
+  const isMeme=fromT?.category==='meme'||toT?.category==='meme';
+  safe('impactDisp', isMeme?(Math.random()*1.5+0.3).toFixed(2)+'%':amt>500?(Math.random()*0.3+0.05).toFixed(3)+'%':'< 0.01%');
   const j=parseInt(document.getElementById('jitterSec').value)||10;
-  document.getElementById('abDelayDisp').textContent = `2–${2+j}s`;
+  safe('abDelayDisp', `2–${2+j}s`);
+  // Show send amount (capped at 0.01 for live)
+  safe('sendAmtDisp', amt>0?`${Math.min(amt,0.01).toFixed(4)} ${from}`:'—');
+  // Show recipient
+  if(toT) safe('recipientDisp', `${toT.sym} contract (${toT.address.slice(0,10)}…)`);
 }
 function updateBridgeQuote() {
   const amt=parseFloat(document.getElementById('bridgeAmt').value)||0;
@@ -1037,7 +1230,7 @@ function setBridgeMax() {
   const v=parseFloat(document.getElementById('bridgeBal').textContent)||0;
   if(v>0){document.getElementById('bridgeAmt').value=(v*0.95).toFixed(4);updateBridgeQuote();}
 }
-function setSlip(v,el){slippage=v;document.querySelectorAll('.slip-btn').forEach(c=>c.classList.remove('active'));el.classList.add('active');fetchQuote();}
+function setSlip(v,el){slippage=v;document.querySelectorAll('.slip-opt').forEach(c=>c.classList.remove('active'));el.classList.add('active');fetchQuote();}
 function flipPair(){
   const f=document.getElementById('fromToken'),t=document.getElementById('toToken');
   const tmp=f.value; f.value=t.value; t.value=tmp;
@@ -1049,45 +1242,21 @@ function switchTab(tab){
   currentTab=tab;
   document.getElementById('tabSwap').classList.toggle('active',tab==='swap');
   document.getElementById('tabBridge').classList.toggle('active',tab==='bridge');
+  const tabBot=document.getElementById('tabBot');
+  if(tabBot) tabBot.classList.toggle('active',tab==='bot');
   document.getElementById('swapPanel').classList.toggle('hidden',tab!=='swap');
   document.getElementById('bridgePanel').classList.toggle('hidden',tab!=='bridge');
+  const botPanel=document.getElementById('botPanel');
+  if(botPanel) botPanel.classList.toggle('hidden',tab!=='bot');
 }
 
 // ═══════════════════════════════════════════════
 // SIMULATION EXECUTION (no wallet needed)
 // ═══════════════════════════════════════════════
 
-async function simSwap(fromSym, toSym, amount) {
-  const rate=getSwapRate(fromSym,toSym), amtOut=(amount*rate).toFixed(6);
-  showProc(`⚙ SIM SWAP`, ['Simulating delay...','Checking simulated balance...','Computing route...','Simulating approval...','Signing (simulation)...','Broadcasting (simulation)...','Awaiting simulated finality...','Confirming...']);
-  await AntiBotEngine.humanDelay(2000);
-  for(let i=1;i<8;i++){await advStep(i);}
-  const ok = Math.random()>0.04;
-  hideProc();
-  if(ok){
-    successCount++; totalSwaps++; totalVol+=amount;
-    // No fake hash passed — sim mode never shows explorer links
-    addLog('sim',`⚙ SIM: ${amount.toFixed(4)} ${fromSym} → ~${amtOut} ${toSym} [SIMULATED — no real tx]`);
-  } else {
-    addLog('err',`⚙ SIM FAILED: ${fromSym}→${toSym} (simulated revert)`);
-  }
-  updateStats();
-}
 
-async function simBridge(amount) {
-  showProc('⚙ SIM BRIDGE',['Jitter delay...','Switching chain (sim)...','Checking balance (sim)...','Approving (sim)...','Signing (sim)...','Burn tx (sim)...','Attestation (sim)...','Mint on Arc (sim)...']);
-  await AntiBotEngine.humanDelay(3000);
-  for(let i=1;i<8;i++){await advStep(i);}
-  const ok=Math.random()>0.06;
-  hideProc();
-  if(ok){
-    successCount++; totalBridges++; totalVol+=amount;
-    addLog('sim',`⚙ SIM: ${amount.toFixed(4)} USDC → Arc Testnet [SIMULATED — no real tx]`);
-  } else {
-    addLog('err',`⚙ SIM FAILED (simulated attestation timeout)`);
-  }
-  updateStats();
-}
+
+
 
 // ═══════════════════════════════════════════════
 // LIVE EXECUTION — FIXED
@@ -1109,105 +1278,111 @@ async function getFreshSigner() {
 }
 
 async function liveSwap(fromSym, toSym, amount) {
-  // Step 0: Ensure Arc network FIRST — before showing any UI
+  // ─────────────────────────────────────────────
+  // Arc Testnet has no public DEX/AMM.
+  // This sends FROM token to the TO token's contract
+  // address — generates real onchain tx with different
+  // from/to addresses. Small amount to avoid waste.
+  // ─────────────────────────────────────────────
+
   const onArc = await ensureArcNetwork();
   if (!onArc) {
-    addLog('err', '❌ Please switch your wallet to Arc Testnet (Chain ID 5042002) and try again.');
+    addLog('err', '❌ Switch wallet to Arc Testnet (Chain ID 5042002) first.');
     return;
   }
 
-  const fromT = getToken(fromSym), toT = getToken(toSym);
+  const fromT = getToken(fromSym);
+  const toT   = getToken(toSym);
   if (!fromT) { addLog('err', `Unknown token: ${fromSym}`); return; }
+  if (!toT)   { addLog('err', `Unknown token: ${toSym}`); return; }
+
+  // Meme token contracts are placeholders — block live
+  if (fromT.category === 'meme') {
+    addLog('err', `❌ ${fromSym} is a placeholder contract. Use USDC or EURC for live txs.`);
+    return;
+  }
+
+  // Send small amount to the TO token's contract address
+  const activityAmt = Math.min(amount, 0.01);
+  const recipient   = toT.address; // send to TO token's contract
 
   attemptCount++;
-  showProc(`⚡ SWAP ${fromT.emoji} → ${toT?.emoji||'?'}`, [
-    '1. Verifying network...',
+  showProc(`⚡ ${fromSym} → ${toT.address.slice(0,8)}…`, [
+    '1. Verifying Arc network...',
     '2. Checking balance...',
-    '3. Preparing transaction...',
+    '3. Building transfer tx...',
     '4. Confirm in wallet...',
     '5. Waiting for confirmation...',
-    '6. ✅ Complete!',
+    '6. ✅ Confirmed!',
   ]);
 
   try {
-    // Step 1 — confirm network
     await advStep(1);
-    await AntiBotEngine.humanDelay(1000);
+    await AntiBotEngine.humanDelay(800);
 
-    // Step 2 — balance check
+    // Balance check
     const bal = await getBalance(fromT.address, account, fromT.decimals);
-    if (bal !== null && bal < amount) {
+    if (bal !== null && bal < 0.002) {
       hideProc();
-      addLog('err', `❌ Insufficient ${fromSym}: have ${bal.toFixed(6)}, need ${amount.toFixed(6)}`);
+      addLog('err', `❌ Need at least 0.002 ${fromSym} for gas. Get from faucet.circle.com`);
       attemptCount--; return;
     }
     await advStep(2);
 
-    // Step 3 — fresh signer + build tx params
+    // Fresh signer + verify chain
     await AntiBotEngine.nonceJitter();
     const freshSigner = await getFreshSigner();
-
-    // Verify chainId one more time on the signer
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== ARC.chainIdDec) {
       hideProc();
-      addLog('err', `❌ Wallet is on chain ${network.chainId}, expected ${ARC.chainIdDec}. Switch to Arc Testnet.`);
+      addLog('err', `❌ Wrong chain: ${network.chainId}. Need Arc Testnet (5042002).`);
       attemptCount--; return;
     }
 
-    const gp = await AntiBotEngine.getRandomGasPrice();
-    // Use correct decimals — USDC/EURC = 6, meme = 18
-    const dec = fromT.decimals;
-    const amtStr = amount.toFixed(Math.min(dec, 6));
-    const raw = ethers.parseUnits(amtStr, dec);
-    const tc = new ethers.Contract(fromT.address, ERC20_ABI, freshSigner);
+    const gp  = await AntiBotEngine.getRandomGasPrice();
+    const raw = ethers.parseUnits(activityAmt.toFixed(6), 6);
+    const tc  = new ethers.Contract(fromT.address, ERC20_ABI, freshSigner);
     await advStep(3);
 
-    // Step 4 — send tx (wallet popup appears here)
-    addLog('pend', `📤 Sending ${amount.toFixed(4)} ${fromSym}... confirm in wallet`);
+    // Send FROM token TO the destination token's contract address
+    addLog('pend', `📤 Sending ${activityAmt} ${fromSym} → ${toT.sym} contract (${recipient.slice(0,10)}…)`);
     let tx;
     try {
-      tx = await tc.transfer(account, raw, {
+      tx = await tc.transfer(recipient, raw, {
         gasPrice: gp,
         gasLimit: BigInt(120000),
       });
-    } catch(sendErr) {
+    } catch(e) {
       hideProc();
-      // User rejected or wallet error
-      const msg = sendErr?.info?.error?.message || sendErr?.reason || sendErr?.message || 'Unknown';
-      addLog('err', `❌ Transaction rejected: ${msg.slice(0,100)}`);
+      const msg = e?.info?.error?.message || e?.reason || e?.message || 'Rejected';
+      addLog('err', `❌ Rejected: ${msg.slice(0,100)}`);
       attemptCount--; return;
     }
-    addLog('pend', `📡 Tx broadcast`, tx.hash);
+    addLog('pend', `📡 Tx sent to ${toT.sym} contract`, tx.hash);
     await advStep(4);
 
-    // Step 5 — wait for receipt with timeout
-    let rcpt = null;
+    // Wait for receipt
+    let rcpt;
     try {
       rcpt = await waitForReceipt(tx, 45000);
       await advStep(5);
-    } catch(waitErr) {
+    } catch(te) {
       hideProc();
-      if (waitErr.message === 'TX_TIMEOUT') {
-        addLog('pend', `⏱ Tx pending — may still confirm. Check explorer.`, tx.hash);
-      } else {
-        addLog('err', `❌ Receipt error: ${waitErr.message?.slice(0,80)}`, tx.hash);
-      }
-      successCount++; totalSwaps++; totalVol += amount;
+      addLog('pend', `⏱ Tx pending — check explorer.`, tx.hash);
+      successCount++; totalSwaps++; totalVol += activityAmt;
       updateStats(); await refreshBalances(); return;
     }
 
-    // Step 6 — success
     await advStep(6); hideProc();
-    successCount++; totalSwaps++; totalVol += amount;
-    const rate = getSwapRate(fromSym, toSym);
-    addLog('ok', `✅ SWAP: ${amount.toFixed(4)} ${fromSym} → ~${(amount*rate).toFixed(4)} ${toSym} | gas: ${rcpt.gasUsed}`, tx.hash);
+    successCount++; totalSwaps++; totalVol += activityAmt;
+    addLog('ok',
+      `✅ ${activityAmt} ${fromSym} sent to ${toT.sym} contract (${recipient.slice(0,10)}…) | gas: ${rcpt.gasUsed}`,
+      tx.hash);
     await refreshBalances(); updateStats();
 
   } catch(e) {
     hideProc();
-    const msg = e?.info?.error?.message || e?.reason || e?.message?.slice(0,100) || 'Unknown error';
-    addLog('err', `❌ Swap error: ${msg}`);
+    addLog('err', `❌ ${e?.info?.error?.message || e?.reason || e?.message?.slice(0,100) || 'Error'}`);
     updateStats();
   }
 }
@@ -1325,7 +1500,7 @@ async function executeSwap(silent=false) {
   if(fromSym===toSym){addLog('err','Cannot swap same token');return;}
 
   // LIVE MODE: must have wallet connected
-  if(isLiveMode && !account){
+  if(!account){
     addLog('err','⚡ Connect your wallet first to execute a real transaction');
     openModal(); return;
   }
@@ -1338,13 +1513,13 @@ async function executeSwap(silent=false) {
     fetchQuote();
   }
   const amount=AntiBotEngine.randomizeAmount(amt);
-  if(isLiveMode && account) await liveSwap(fromSym,toSym,amount);
-  else await simSwap(fromSym,toSym,amount);
+  if(account) await liveSwap(fromSym,toSym,amount);
+  else { addLog('err','❌ Connect wallet first'); }
 }
 
 async function executeBridge(silent=false) {
   // LIVE MODE: must have wallet connected
-  if(isLiveMode && !account){
+  if(!account){
     addLog('err','⚡ Connect your wallet first to execute a real bridge');
     openModal(); return;
   }
@@ -1357,8 +1532,8 @@ async function executeBridge(silent=false) {
     updateBridgeQuote();
   }
   const amount=AntiBotEngine.randomizeAmount(amt);
-  if(isLiveMode && account) await liveBridge(amount);
-  else await simBridge(amount);
+  if(account) await liveBridge(amount);
+  else { addLog('err','❌ Connect wallet first'); }
 }
 
 // ═══════════════════════════════════════════════
@@ -1372,12 +1547,12 @@ function toggleAuto(){
   btn.classList.toggle('on', autoRunning);
 
   if(autoRunning){
-    if(isLiveMode&&!account){
+    if(!account){
       addLog('err','Connect wallet before starting live auto-bot');
       btn.classList.remove('on'); autoRunning=false; return;
     }
     runCount=0;
-    addLog('pend',`🤖 AUTO-BOT ${isLiveMode?'LIVE':'SIM'} STARTED · interval: ${document.getElementById('intervalSec').value}s`);
+    addLog('pend',`🤖 AUTO-BOT ${true?'LIVE':'SIM'} STARTED · interval: ${document.getElementById('intervalSec').value}s`);
     // Fire the first run immediately, then schedule subsequent ones
     runAutoIteration();
   } else {
@@ -1499,28 +1674,151 @@ setInterval(async()=>{
 },3000);
 
 // ═══════════════════════════════════════════════
-// INIT
+// BATCH SWAP ENGINE
+// ═══════════════════════════════════════════════
+let batchRunning = false;
+let batchTimer   = null;
+let batchType    = 'swap'; // 'swap' | 'bridge' | 'mix'
+let batchDone    = 0;
+let batchTotal   = 0;
+
+function setBatchCount(n, el) {
+  document.getElementById('batchCount').value = n;
+  document.querySelectorAll('.batch-preset[onclick^="setBatchCount"]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setBatchType(type, el) {
+  batchType = type;
+  document.querySelectorAll('#bTypeSwap,#bTypeBridge,#bTypeMix').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function updateBatchProgress() {
+  const pct = batchTotal > 0 ? (batchDone / batchTotal * 100) : 0;
+  document.getElementById('batchBar').style.width = pct + '%';
+  document.getElementById('batchCountTxt').textContent = `${batchDone} / ${batchTotal}`;
+}
+
+function batchNextCountdown(secs) {
+  let remaining = secs;
+  const el = document.getElementById('batchNextTxt');
+  if (!el) return;
+  el.textContent = `Next swap in ${remaining}s…`;
+  const iv = setInterval(() => {
+    remaining--;
+    if (remaining <= 0 || !batchRunning) { clearInterval(iv); return; }
+    el.textContent = `Next swap in ${remaining}s…`;
+  }, 1000);
+}
+
+async function startBatch() {
+  if (batchRunning) return;
+
+  // In live mode, require wallet
+  if (!account) {
+    addLog('err', '❌ Connect your wallet first for live batch swaps');
+    openModal(); return;
+  }
+
+  const count    = parseInt(document.getElementById('batchCount').value) || 5;
+  const minDelay = parseInt(document.getElementById('batchMinDelay').value) || 10;
+  const maxDelay = parseInt(document.getElementById('batchMaxDelay').value) || 60;
+  const amt      = parseFloat(document.getElementById('batchAmt').value) || 0.01;
+
+  if (minDelay > maxDelay) {
+    addLog('err', '❌ Min delay must be less than max delay'); return;
+  }
+
+  batchRunning = true;
+  batchDone    = 0;
+  batchTotal   = count;
+
+  // Show progress UI
+  document.getElementById('batchProgress').style.display = 'block';
+  document.getElementById('batchStartBtn').classList.add('hidden');
+  document.getElementById('batchStopBtn').classList.remove('hidden');
+  document.getElementById('batchStatusTxt').textContent = 'Running batch…';
+  updateBatchProgress();
+
+  addLog('pend', `🚀 BATCH STARTED: ${count} swaps · ${minDelay}–${maxDelay}s random delays · ${amt} USDC each`);
+
+  // Build the queue with random delays pre-assigned
+  const queue = [];
+  for (let i = 0; i < count; i++) {
+    const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1) + minDelay);
+    const type  = batchType === 'mix'
+      ? (i % 2 === 0 ? 'swap' : 'bridge')
+      : batchType;
+    queue.push({ index: i + 1, delay, type, amt });
+  }
+
+  // Log the full schedule upfront
+  addLog('pend', `📋 Schedule: ${queue.map(q => `#${q.index}(${q.type},${q.delay}s)`).join(' → ')}`);
+
+  // Execute each swap sequentially with its pre-assigned delay
+  for (const job of queue) {
+    if (!batchRunning) break;
+
+    // Wait the random delay before this swap
+    addLog('pend', `⏱ Swap #${job.index}/${count} (${job.type}) starts in ${job.delay}s…`);
+    batchNextCountdown(job.delay);
+
+    await sleep(job.delay * 1000);
+    if (!batchRunning) break;
+
+    // Execute this swap
+    document.getElementById('batchStatusTxt').textContent = `Running swap ${job.index} of ${count}…`;
+
+    if (job.type === 'bridge') {
+      document.getElementById('bridgeAmt').value = job.amt;
+      updateBridgeQuote();
+      await executeBridge(true);
+    } else {
+      document.getElementById('fromAmt').value = job.amt;
+      fetchQuote();
+      await executeSwap(true);
+    }
+
+    batchDone++;
+    updateBatchProgress();
+    addLog('pend', `✔ ${batchDone}/${count} complete · ${count - batchDone} remaining`);
+  }
+
+  // Done
+  const finished = batchDone >= batchTotal;
+  batchRunning = false;
+  document.getElementById('batchProgress').style.display = finished ? 'block' : 'block';
+  document.getElementById('batchStartBtn').classList.remove('hidden');
+  document.getElementById('batchStopBtn').classList.add('hidden');
+  document.getElementById('batchStatusTxt').textContent = finished
+    ? `✅ Batch complete! ${batchDone}/${batchTotal} done`
+    : `⏹ Stopped at ${batchDone}/${batchTotal}`;
+  document.getElementById('batchNextTxt').textContent = '';
+  document.getElementById('batchBar').style.width = finished ? '100%' : document.getElementById('batchBar').style.width;
+
+  addLog(finished ? 'ok' : 'pend',
+    `${finished ? '✅ BATCH COMPLETE' : '⏹ BATCH STOPPED'}: ${batchDone}/${batchTotal} swaps · Total vol: ${(batchDone * (parseFloat(document.getElementById('batchAmt').value)||0.01)).toFixed(4)} USDC`);
+}
+
+function stopBatch() {
+  batchRunning = false;
+  clearTimeout(batchTimer);
+  document.getElementById('batchStartBtn').classList.remove('hidden');
+  document.getElementById('batchStopBtn').classList.add('hidden');
+  document.getElementById('batchStatusTxt').textContent = `⏹ Stopped at ${batchDone}/${batchTotal}`;
+  document.getElementById('batchNextTxt').textContent = '';
+  addLog('pend', `⏹ Batch manually stopped at ${batchDone}/${batchTotal}`);
+}
+
+// ═══════════════════════════════════════════════
+// INIT — No auto-reconnect. User must always sign.
 // ═══════════════════════════════════════════════
 fetchQuote();
 updateTokenPicker('from', TOKEN_REGISTRY[0]);
 updateTokenPicker('to',   TOKEN_REGISTRY[1]);
 
-// Auto-reconnect
-window.addEventListener('load',async()=>{
-  if(window.ethereum){
-    try{
-      const accs=await window.ethereum.request({method:'eth_accounts'});
-      if(accs.length){
-        provider=new ethers.BrowserProvider(window.ethereum);
-        signer=await provider.getSigner(); account=accs[0];
-        const net=await provider.getNetwork(); chainId=Number(net.chainId);
-        onConnected();
-      }
-    }catch{}
-  }
-});
 </script>
 
 </body>
 </html>
-</body></html>
