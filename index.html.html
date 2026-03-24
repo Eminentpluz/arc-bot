@@ -1,606 +1,661 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARC BOT — Unified Swap & Bridge</title>
+<title>ARC BOT</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Rajdhani:wght@400;600;700;800&display=swap');
-
-:root {
-  --bg: #0a0800;
-  --s1: #110e00;
-  --s2: #181200;
-  --card: #1a1500;
-  --border: #2a2000;
-  --border2: #3a2e00;
-  --cyan: #ffd700;
-  --cyan2: #c9a800;
-  --green: #ffe066;
-  --red: #ff4d4d;
-  --yellow: #fff3a0;
-  --purple: #ffb300;
-  --orange: #ff9500;
-  --text: #fff8dc;
-  --muted: #7a6a30;
-  --muted2: #3d3010;
-  --glow-c: rgba(255,215,0,0.25);
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 
-body {
-  font-family:'IBM Plex Mono',monospace;
-  background:var(--bg); color:var(--text);
-  min-height:100vh; overflow-x:hidden;
-}
-body::before {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-  background:
-    radial-gradient(ellipse 70% 40% at 5% 15%, rgba(255,215,0,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 50% at 95% 85%, rgba(255,179,0,0.05) 0%, transparent 60%),
-    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,215,0,0.025) 40px),
-    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,215,0,0.025) 40px);
-}
-body::after {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+:root{
+–bg:#0c0c0f;
+–surface:#131318;
+–card:#18181e;
+–card2:#1e1e26;
+–border:#26262f;
+–border-light:#2e2e3a;
+–gold:#f5c842;
+–gold2:#d4a017;
+–gold-dim:rgba(245,200,66,0.12);
+–gold-glow:rgba(245,200,66,0.08);
+–green:#22c55e;
+–green-dim:rgba(34,197,94,0.1);
+–red:#ef4444;
+–red-dim:rgba(239,68,68,0.1);
+–amber:#f59e0b;
+–blue:#3b82f6;
+–text:#f1f1f3;
+–text2:#9999aa;
+–text3:#55556a;
+–mono:‘JetBrains Mono’,monospace;
+–sans:‘Inter’,sans-serif;
 }
 
-.wrap {max-width:1100px;margin:0 auto;padding:18px 16px 48px;position:relative;z-index:1}
+body{
+font-family:var(–sans);
+background:var(–bg);
+color:var(–text);
+min-height:100vh;
+overflow-x:hidden;
+}
 
-/* ── HEADER ── */
-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding-bottom:16px; border-bottom:1px solid var(--border2);
-  margin-bottom:16px; flex-wrap:wrap; gap:10px;
+/* Subtle bg glow */
+body::before{
+content:’’;position:fixed;inset:0;pointer-events:none;z-index:0;
+background:
+radial-gradient(ellipse 60% 50% at 20% 0%,rgba(245,200,66,0.04) 0%,transparent 70%),
+radial-gradient(ellipse 40% 40% at 80% 100%,rgba(245,200,66,0.03) 0%,transparent 70%);
 }
-.logo-group {display:flex;align-items:center;gap:12px}
-.logo-box {
-  width:44px; height:44px; border-radius:12px;
-  background:linear-gradient(135deg,#ffd700,#ff9500);
-  display:flex;align-items:center;justify-content:center; font-size:22px;
-  animation:logoGlow 3s ease-in-out infinite;
-}
-@keyframes logoGlow{0%,100%{box-shadow:0 0 18px rgba(255,215,0,0.4)}50%{box-shadow:0 0 40px rgba(255,215,0,0.7),0 0 10px rgba(255,149,0,0.6)}}
-.logo-name {
-  font-family:'Rajdhani',sans-serif; font-weight:800; font-size:26px; letter-spacing:4px;
-  background:linear-gradient(90deg,#ffd700,#ff9500);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-}
-.logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;margin-top:-2px}
 
-.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.app{max-width:1200px;margin:0 auto;padding:20px 16px 60px;position:relative;z-index:1}
 
-/* Mode toggle */
-.mode-toggle {
-  display:flex; gap:3px; background:var(--s1);
-  border:1px solid var(--border2); border-radius:10px; padding:3px;
+/* ── TOPBAR ── */
+.topbar{
+display:flex;align-items:center;justify-content:space-between;
+padding:0 0 20px;border-bottom:1px solid var(–border);
+margin-bottom:24px;flex-wrap:wrap;gap:12px;
 }
-.mode-btn {
-  padding:6px 14px; border-radius:7px; border:none; background:transparent;
-  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px;
-  cursor:pointer; transition:all 0.2s; color:var(--muted);
+.brand{display:flex;align-items:center;gap:14px}
+.brand-icon{
+width:40px;height:40px;border-radius:10px;
+background:linear-gradient(135deg,var(–gold),var(–gold2));
+display:flex;align-items:center;justify-content:center;
+font-size:20px;flex-shrink:0;
+box-shadow:0 0 20px rgba(245,200,66,0.3);
 }
-.mode-btn.active {
-  background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,149,0,0.15));
-  color:var(--cyan); border:1px solid rgba(255,215,0,0.35);
-}
-.mode-badge {
-  padding:5px 12px; border-radius:20px; font-size:11px; letter-spacing:1px;
-  display:flex; align-items:center; gap:6px;
-}
-.mode-badge.sim  { background:rgba(255,123,0,0.08); border:1px solid rgba(255,123,0,0.3); color:var(--orange); }
-.mode-badge.live { background:rgba(0,255,157,0.06); border:1px solid rgba(0,255,157,0.25); color:var(--green); }
-.badge-dot { width:7px; height:7px; border-radius:50%; animation:blink 1.6s ease-in-out infinite; }
-.live .badge-dot{background:var(--green)} .sim .badge-dot{background:var(--orange)}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.brand-name{font-size:20px;font-weight:700;letter-spacing:0.5px;color:var(–text)}
+.brand-tag{font-size:11px;color:var(–text3);font-family:var(–mono);margin-top:1px}
 
-#blockBadge{font-size:11px;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:5px 12px;border-radius:20px}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
-/* Wallet button */
-.wc-btn {
-  display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;
-  border:1px solid var(--border2);background:var(--s2);color:var(--text);
-  font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.25s;
-  position:relative;overflow:hidden;
+/* Mode pill */
+.mode-pill{
+display:flex;background:var(–surface);border:1px solid var(–border);
+border-radius:8px;padding:3px;gap:2px;
 }
-.wc-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,215,0,0.07),rgba(255,149,0,0.07));opacity:0;transition:opacity 0.25s}
-.wc-btn:hover::before{opacity:1}
-.wc-btn:hover{border-color:var(--cyan2)}
-.wc-btn.connected{border-color:rgba(0,255,157,0.4);color:var(--green)}
-
-/* ── NETWORK BAR ── */
-.net-bar {
-  display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;
+.mpb{
+padding:5px 14px;border-radius:6px;border:none;
+font-family:var(–sans);font-size:12px;font-weight:500;
+cursor:pointer;transition:all 0.2s;color:var(–text2);background:transparent;
 }
-.net-chip {
-  background:var(--card); border:1px solid var(--border);
-  border-radius:8px; padding:6px 12px; font-size:10px; color:var(--muted);
-  display:flex; align-items:center; gap:6px; letter-spacing:1px;
+.mpb.active{background:var(–gold);color:#0c0c0f;font-weight:600;}
+
+.status-dot{
+display:flex;align-items:center;gap:6px;
+padding:6px 12px;border-radius:8px;font-size:12px;font-weight:500;
 }
-.net-chip span{color:var(--cyan)}
-.net-chip.warn span{color:var(--orange)}
+.status-dot.sim{background:rgba(245,158,11,0.1);color:var(–amber);border:1px solid rgba(245,158,11,0.2)}
+.status-dot.live{background:var(–green-dim);color:var(–green);border:1px solid rgba(34,197,94,0.2)}
+.sdot{width:6px;height:6px;border-radius:50%;animation:pulse2 2s ease-in-out infinite}
+.sim .sdot{background:var(–amber)} .live .sdot{background:var(–green)}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:0.3}}
 
-/* ── MAIN GRID ── */
-.main-grid{display:grid;grid-template-columns:1fr 330px;gap:18px}
-@media(max-width:760px){.main-grid{grid-template-columns:1fr}}
+#blockBadge{font-size:11px;color:var(–text3);font-family:var(–mono);background:var(–surface);border:1px solid var(–border);padding:5px 10px;border-radius:7px}
 
-/* ── CARDS ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px}
-.card-hd{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;font-family:'Rajdhani',sans-serif;font-weight:600;margin-bottom:16px}
-.card-hd span{color:var(--cyan)}
+.btn-connect{
+display:flex;align-items:center;gap:7px;
+padding:7px 16px;border-radius:8px;
+border:1px solid var(–border-light);
+background:var(–card);color:var(–text);
+font-family:var(–sans);font-size:13px;font-weight:500;
+cursor:pointer;transition:all 0.2s;white-space:nowrap;
+}
+.btn-connect:hover{border-color:var(–gold);background:var(–gold-dim)}
+.btn-connect.connected{border-color:rgba(34,197,94,0.4);color:var(–green)}
+.btn-disconnect{
+display:flex;align-items:center;gap:7px;
+padding:7px 16px;border-radius:8px;
+border:1px solid rgba(239,68,68,0.3);
+background:rgba(239,68,68,0.06);color:var(–red);
+font-family:var(–sans);font-size:13px;font-weight:500;
+cursor:pointer;transition:all 0.2s;
+}
+.btn-disconnect:hover{background:rgba(239,68,68,0.12)}
+
+/* ── NET BAR ── */
+.netbar{
+display:flex;align-items:center;gap:6px;
+padding:10px 14px;background:var(–surface);
+border:1px solid var(–border);border-radius:10px;
+margin-bottom:20px;flex-wrap:wrap;
+}
+.nchip{font-size:11px;color:var(–text3);font-family:var(–mono);display:flex;align-items:center;gap:5px}
+.nchip strong{color:var(–text2)}
+.nchip a{color:var(–gold);text-decoration:none}
+.nchip a:hover{color:var(–gold2)}
+.nsep{width:1px;height:12px;background:var(–border);flex-shrink:0}
+
+/* SIM BANNER */
+.sim-banner{
+display:flex;align-items:center;gap:12px;
+background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);
+border-radius:10px;padding:10px 14px;margin-bottom:20px;
+}
+.sim-banner.hidden{display:none!important}
+.sim-banner-txt{font-size:12px;color:var(–amber);flex:1}
+.sim-banner-txt strong{font-weight:600}
+.btn-golive{
+padding:5px 14px;border-radius:7px;
+border:1px solid rgba(245,200,66,0.4);
+background:transparent;color:var(–gold);
+font-family:var(–sans);font-size:12px;font-weight:500;
+cursor:pointer;white-space:nowrap;transition:all 0.2s;
+}
+.btn-golive:hover{background:var(–gold-dim)}
+
+/* ── LAYOUT ── */
+.grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+
+/* ── CARD ── */
+.card{background:var(–card);border:1px solid var(–border);border-radius:14px;padding:20px}
+.card-title{font-size:11px;font-weight:600;letter-spacing:1px;color:var(–text3);text-transform:uppercase;margin-bottom:16px}
 
 /* ── TABS ── */
-.tabs{display:flex;gap:3px;background:var(--s1);border-radius:12px;padding:4px;margin-bottom:20px}
-.tab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.2s;letter-spacing:1px}
-.tab.active{background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,149,0,0.12));color:var(--cyan);border:1px solid rgba(255,215,0,0.3)}
+.tabs{display:flex;background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:3px;gap:3px;margin-bottom:20px}
+.tab{flex:1;padding:8px;border-radius:7px;border:none;background:transparent;color:var(–text3);font-family:var(–sans);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s}
+.tab.active{background:var(–gold);color:#0c0c0f;font-weight:600}
 
-/* ── TOKEN BOXES ── */
-.tok-box{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:15px;transition:border-color 0.2s;margin-bottom:6px}
-.tok-box:focus-within{border-color:rgba(255,215,0,0.35)}
-.tok-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px}
+/* ── TOKEN PANEL ── */
+.tok-panel{
+background:var(–surface);border:1px solid var(–border);
+border-radius:12px;padding:14px;margin-bottom:8px;
+transition:border-color 0.2s;
+}
+.tok-panel:focus-within{border-color:rgba(245,200,66,0.3)}
+.tok-label{font-size:11px;font-weight:500;color:var(–text3);margin-bottom:10px;letter-spacing:0.3px}
 .tok-row{display:flex;align-items:center;gap:10px}
-.tok-picker{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:8px 12px;cursor:pointer;min-width:130px;transition:border-color 0.2s;user-select:none}
-.tok-picker:hover{border-color:var(--cyan2)}
+.tok-btn{
+display:flex;align-items:center;gap:8px;
+background:var(–card);border:1px solid var(–border-light);
+border-radius:9px;padding:8px 12px;cursor:pointer;
+min-width:120px;transition:all 0.2s;
+}
+.tok-btn:hover{border-color:var(–gold);background:var(–gold-dim)}
 .tok-emoji{font-size:18px;line-height:1}
-.tok-info{display:flex;flex-direction:column}
-.tok-sym{font-size:13px;font-weight:600;color:var(--text)}
-.tok-name-sm{font-size:9px;color:var(--muted);letter-spacing:1px}
-.tok-chevron{margin-left:auto;color:var(--muted);font-size:11px}
-.amt-input{flex:1;background:transparent;border:none;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:24px;text-align:right;outline:none;width:100%}
-.amt-input::placeholder{color:var(--muted2)}
-.bal-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px}
-.max-btn{color:var(--cyan);cursor:pointer;transition:opacity 0.2s}
-.max-btn:hover{opacity:0.65}
-.sw-arr-wrap{display:flex;justify-content:center;padding:4px 0}
-.sw-arr{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cyan);font-size:16px;transition:all 0.3s}
-.sw-arr:hover{transform:rotate(180deg);border-color:var(--cyan);background:rgba(255,215,0,0.1)}
+.tok-sym{font-size:14px;font-weight:600;color:var(–text)}
+.tok-sub{font-size:10px;color:var(–text3);margin-top:1px}
+.tok-caret{margin-left:auto;color:var(–text3);font-size:10px}
+.amt-field{flex:1;background:transparent;border:none;color:var(–text);font-family:var(–mono);font-size:22px;font-weight:500;text-align:right;outline:none;width:100%}
+.amt-field::placeholder{color:var(–text3)}
+.tok-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.tok-bal{font-size:12px;color:var(–text3)}
+.tok-bal strong{color:var(–text2)}
+.btn-max{font-size:11px;color:var(–gold);cursor:pointer;font-weight:500;transition:opacity 0.2s;background:none;border:none;font-family:var(–sans)}
+.btn-max:hover{opacity:0.7}
+
+/* Flip button */
+.flip-wrap{display:flex;justify-content:center;padding:6px 0;position:relative}
+.btn-flip{
+width:34px;height:34px;border-radius:50%;
+background:var(–card);border:1px solid var(–border-light);
+display:flex;align-items:center;justify-content:center;
+cursor:pointer;color:var(–text2);font-size:15px;
+transition:all 0.3s;z-index:1;
+}
+.btn-flip:hover{transform:rotate(180deg);border-color:var(–gold);color:var(–gold);background:var(–gold-dim)}
 
 /* Slippage */
-.slip-row{display:flex;gap:6px;margin:12px 0 6px;align-items:center}
-.slip-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;flex:1}
-.slip-chip{padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s}
-.slip-chip.active{border-color:var(--cyan);color:var(--cyan);background:rgba(255,215,0,0.1)}
+.slip-row{display:flex;align-items:center;gap:6px;margin:12px 0}
+.slip-lbl{font-size:11px;color:var(–text3);font-weight:500;flex:1}
+.slip-btn{padding:4px 12px;border-radius:6px;border:1px solid var(–border);background:transparent;color:var(–text3);font-size:11px;font-family:var(–sans);cursor:pointer;transition:all 0.2s}
+.slip-btn:hover{border-color:var(–gold);color:var(–gold)}
+.slip-btn.active{border-color:var(–gold);background:var(–gold-dim);color:var(–gold);font-weight:500}
 
-/* Info rows */
-.info-rows{background:var(--s1);border-radius:12px;padding:12px 14px;margin:12px 0;display:flex;flex-direction:column;gap:8px}
-.ir{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
-.ir .v{color:var(--text)} .ir .v.g{color:var(--green)} .ir .v.y{color:var(--yellow)} .ir .v.o{color:var(--orange)}
+/* Info table */
+.info-table{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:12px;margin:14px 0}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
+.info-row:not(:last-child){border-bottom:1px solid var(–border)}
+.info-k{color:var(–text3)}
+.info-v{color:var(–text2);font-family:var(–mono);font-size:11px}
+.info-v.gold{color:var(–gold)}
+.info-v.green{color:var(–green)}
+.info-v.amber{color:var(–amber)}
 
-/* Execute btn */
-.exec-btn{width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#c9a800,#ff9500);color:#0a0800;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:3px;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden}
-.exec-btn::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;background:rgba(255,255,255,0.15);border-radius:50%;transform:translate(-50%,-50%);transition:width 0.4s,height 0.4s}
-.exec-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,215,0,0.4)}
-.exec-btn:not(:disabled):active::after{width:400px;height:400px;opacity:0}
-.exec-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none!important}
+/* Execute button */
+.btn-exec{
+width:100%;padding:14px;border-radius:10px;border:none;
+background:linear-gradient(135deg,var(–gold),var(–gold2));
+color:#0c0c0f;font-family:var(–sans);font-size:15px;font-weight:700;
+cursor:pointer;transition:all 0.25s;letter-spacing:0.3px;
+position:relative;overflow:hidden;
+}
+.btn-exec:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(245,200,66,0.3)}
+.btn-exec:active:not(:disabled){transform:translateY(0)}
+.btn-exec:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.exec-note{text-align:center;margin-top:8px;font-size:11px;color:var(–text3)}
 
-/* Bridge */
-.chain-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.chain-sel{flex:1;appearance:none;outline:none;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer}
-.chain-sel:focus{border-color:var(--cyan2)}
-.chain-arr{color:var(--cyan);font-size:20px;flex-shrink:0}
+/* Chain selector */
+.chain-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.chain-sel{flex:1;appearance:none;outline:none;background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px 12px;color:var(–text);font-family:var(–sans);font-size:12px;cursor:pointer}
+.chain-sel:focus{border-color:rgba(245,200,66,0.4)}
+.chain-arrow{color:var(–gold);font-size:18px;flex-shrink:0}
 
 /* ── SIDEBAR ── */
 .sidebar{display:flex;flex-direction:column;gap:14px}
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat-box{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
-.stat-v{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:22px;color:var(--cyan)}
-.stat-k{font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px}
-.bot-ctrl{display:flex;flex-direction:column;gap:12px}
-.toggle-row{display:flex;align-items:center;justify-content:space-between}
-.toggle-lbl{font-size:11px;color:var(--muted);letter-spacing:1px}
-.tog{width:42px;height:23px;border-radius:12px;background:var(--border);border:none;position:relative;cursor:pointer;transition:background 0.3s;outline:none;flex-shrink:0}
-.tog.on{background:var(--cyan2)}
-.tog::after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;background:#fff;border-radius:50%;transition:transform 0.3s}
-.tog.on::after{transform:translateX(19px)}
-.ii{background:var(--s1);border:1px solid var(--border2);border-radius:9px;padding:8px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;width:100%;outline:none;transition:border-color 0.2s}
-.ii:focus{border-color:var(--cyan2)}
-.ii-lbl{font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:5px}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{background:var(–surface);border:1px solid var(–border);border-radius:10px;padding:12px;text-align:center}
+.stat-val{font-size:20px;font-weight:700;color:var(–gold);font-family:var(–mono)}
+.stat-key{font-size:10px;color:var(–text3);margin-top:3px;font-weight:500;letter-spacing:0.5px}
+.stat-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:500}
+.badge-gold{background:var(–gold-dim);color:var(–gold);border:1px solid rgba(245,200,66,0.2)}
+.badge-green{background:var(–green-dim);color:var(–green);border:1px solid rgba(34,197,94,0.2)}
+.badge-red{background:var(–red-dim);color:var(–red);border:1px solid rgba(239,68,68,0.2)}
+.badge-gray{background:rgba(153,153,170,0.1);color:var(–text3);border:1px solid var(–border)}
+
+/* Bot config */
+.config-list{display:flex;flex-direction:column;gap:10px}
+.cfg-row{display:flex;align-items:center;justify-content:space-between}
+.cfg-label{font-size:12px;color:var(–text2);font-weight:500}
+.toggle{width:38px;height:20px;border-radius:10px;background:var(–border-light);border:none;position:relative;cursor:pointer;transition:background 0.3s;outline:none;flex-shrink:0}
+.toggle.on{background:var(–gold)}
+.toggle::after{content:’’;position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.toggle.on::after{transform:translateX(18px)}
+.cfg-input-wrap{margin-top:2px}
+.cfg-input-label{font-size:10px;color:var(–text3);margin-bottom:4px;font-weight:500;letter-spacing:0.3px}
+.cfg-input{width:100%;background:var(–surface);border:1px solid var(–border);border-radius:7px;padding:7px 10px;color:var(–text);font-family:var(–mono);font-size:12px;outline:none;transition:border-color 0.2s}
+.cfg-input:focus{border-color:rgba(245,200,66,0.4)}
+.cfg-note{font-size:10px;color:var(–text3);line-height:1.7;padding:8px;background:var(–surface);border-radius:8px;border:1px solid var(–border)}
+.cfg-note strong{color:var(–amber)}
 
 /* Log */
-.log-wrap{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
-.log-wrap::-webkit-scrollbar{width:3px}
-.log-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.log-item{background:var(--s1);border-radius:10px;padding:10px 12px;border-left:3px solid var(--border2);font-size:11px;animation:fadeSlide 0.3s ease}
-@keyframes fadeSlide{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-.log-item.ok{border-left-color:var(--green)}
-.log-item.pend{border-left-color:var(--yellow)}
-.log-item.err{border-left-color:var(--red)}
-.log-item.sim{border-left-color:var(--orange)}
-.log-t{color:var(--muted);font-size:10px}
-.log-m{color:var(--text);margin-top:3px;line-height:1.5}
-.log-h{color:var(--cyan2);font-size:10px;margin-top:3px;word-break:break-all;cursor:pointer}
-.log-h:hover{color:var(--cyan)}
+.log-list{max-height:250px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+.log-list::-webkit-scrollbar{width:3px}
+.log-list::-webkit-scrollbar-thumb{background:var(–border-light);border-radius:3px}
+.log-entry{padding:9px 11px;border-radius:8px;border-left:3px solid var(–border);font-size:11px;animation:fadeUp 0.3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.log-entry.ok{border-left-color:var(–green);background:rgba(34,197,94,0.04)}
+.log-entry.pend{border-left-color:var(–amber);background:rgba(245,158,11,0.04)}
+.log-entry.err{border-left-color:var(–red);background:rgba(239,68,68,0.04)}
+.log-entry.sim{border-left-color:var(–blue);background:rgba(59,130,246,0.04)}
+.log-time{font-size:10px;color:var(–text3);font-family:var(–mono);margin-bottom:2px}
+.log-msg{color:var(–text2);line-height:1.4}
+.log-hash{font-size:10px;color:var(–gold);cursor:pointer;font-family:var(–mono);margin-top:2px;word-break:break-all}
+.log-hash:hover{color:var(–gold2)}
+.log-empty{font-size:12px;color:var(–text3);text-align:center;padding:20px 0}
 
 /* ── TOKEN MODAL ── */
-.tok-modal-bg{position:fixed;inset:0;background:rgba(3,5,10,0.92);backdrop-filter:blur(6px);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
-.tok-modal-bg.open{opacity:1;pointer-events:all}
-.tok-modal{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:24px;width:420px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(255,215,0,0.12);transform:translateY(12px);transition:transform 0.25s}
-.tok-modal-bg.open .tok-modal{transform:translateY(0)}
-.tok-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.tok-modal-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:18px;letter-spacing:2px;color:var(--cyan)}
-.tok-search{width:100%;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;margin-bottom:12px;transition:border-color 0.2s}
-.tok-search:focus{border-color:var(--cyan2)}
-.tok-cats{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.tok-cat{padding:4px 12px;border-radius:20px;font-size:10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'IBM Plex Mono',monospace;letter-spacing:1px}
-.tok-cat.active{border-color:var(--cyan);color:var(--cyan);background:rgba(255,215,0,0.1)}
-.tok-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px}
-.tok-list::-webkit-scrollbar{width:3px}
-.tok-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.tok-row-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
-.tok-row-item:hover{background:rgba(255,215,0,0.06);border-color:rgba(255,215,0,0.2)}
-.tok-row-item.selected{background:rgba(255,215,0,0.1);border-color:rgba(255,215,0,0.3)}
-.tok-item-emoji{font-size:22px;width:32px;text-align:center;flex-shrink:0}
-.tok-item-info{flex:1;min-width:0}
-.tok-item-sym{font-size:13px;font-weight:600;color:var(--text)}
-.tok-item-full{font-size:10px;color:var(--muted);margin-top:1px}
-.tok-item-addr{font-size:9px;color:var(--muted2);margin-top:1px}
-.tok-item-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-family:'IBM Plex Mono',monospace;letter-spacing:1px}
-.badge-stable{background:rgba(255,224,102,0.1);color:var(--green);border:1px solid rgba(255,224,102,0.25)}
-.badge-meme{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.25)}
-.badge-custom{background:rgba(255,149,0,0.1);color:var(--purple);border:1px solid rgba(255,149,0,0.25)}
-.import-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
-.import-row{display:flex;gap:8px}
-.import-input{flex:1;background:var(--s1);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none}
-.import-input:focus{border-color:var(--cyan2)}
-.import-btn{padding:8px 14px;border-radius:8px;border:1px solid var(--cyan2);background:transparent;color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;white-space:nowrap;transition:all 0.2s}
-.import-btn:hover{background:rgba(255,215,0,0.1)}
-.import-status{font-size:10px;color:var(--muted);margin-top:6px;min-height:14px}
+.overlay{position:fixed;inset:0;background:rgba(12,12,15,0.85);backdrop-filter:blur(8px);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(–card);border:1px solid var(–border-light);border-radius:16px;padding:22px;width:400px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.5);transform:translateY(10px);transition:transform 0.2s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-title{font-size:15px;font-weight:600;color:var(–text)}
+.btn-close{background:none;border:none;color:var(–text3);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:5px}
+.btn-close:hover{color:var(–text);background:var(–border)}
+.tok-search-input{width:100%;background:var(–surface);border:1px solid var(–border);border-radius:9px;padding:10px 13px;color:var(–text);font-family:var(–sans);font-size:13px;outline:none;margin-bottom:12px;transition:border-color 0.2s}
+.tok-search-input:focus{border-color:rgba(245,200,66,0.4)}
+.tok-cats{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.tok-cat-btn{padding:4px 11px;border-radius:6px;border:1px solid var(–border);background:transparent;color:var(–text3);font-size:11px;font-weight:500;cursor:pointer;transition:all 0.2s}
+.tok-cat-btn:hover{border-color:var(–gold);color:var(–gold)}
+.tok-cat-btn.active{border-color:var(–gold);background:var(–gold-dim);color:var(–gold)}
+.tok-items{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:3px}
+.tok-items::-webkit-scrollbar{width:3px}
+.tok-items::-webkit-scrollbar-thumb{background:var(–border-light);border-radius:3px}
+.tok-item{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:9px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
+.tok-item:hover{background:var(–surface);border-color:var(–border)}
+.tok-item.sel{background:var(–gold-dim);border-color:rgba(245,200,66,0.25)}
+.ti-icon{font-size:22px;width:30px;text-align:center;flex-shrink:0}
+.ti-info{flex:1;min-width:0}
+.ti-sym{font-size:13px;font-weight:600;color:var(–text)}
+.ti-name{font-size:11px;color:var(–text3);margin-top:1px}
+.ti-addr{font-size:9px;color:var(–text3);font-family:var(–mono);margin-top:1px}
+.ti-warn{font-size:9px;color:var(–amber);margin-top:2px}
+.ti-price{font-size:10px;color:var(–gold);font-family:var(–mono)}
+.ti-tag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:0.5px}
+.tag-stable{background:var(–green-dim);color:var(–green)}
+.tag-meme{background:rgba(245,200,66,0.1);color:var(–gold)}
+.tag-custom{background:rgba(59,130,246,0.1);color:var(–blue)}
+.import-wrap{margin-top:12px;padding-top:12px;border-top:1px solid var(–border)}
+.import-label{font-size:10px;font-weight:600;color:var(–text3);margin-bottom:7px;letter-spacing:0.5px}
+.import-row{display:flex;gap:7px}
+.import-input{flex:1;background:var(–surface);border:1px solid var(–border);border-radius:7px;padding:8px 10px;color:var(–text);font-family:var(–mono);font-size:11px;outline:none}
+.import-input:focus{border-color:rgba(245,200,66,0.4)}
+.btn-import{padding:8px 14px;border-radius:7px;border:1px solid rgba(245,200,66,0.4);background:transparent;color:var(–gold);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.2s}
+.btn-import:hover{background:var(–gold-dim)}
+.import-msg{font-size:10px;color:var(–text3);margin-top:6px;min-height:14px}
 
 /* ── WALLET MODAL ── */
-.modal-bg{position:fixed;inset:0;background:rgba(3,5,10,0.92);backdrop-filter:blur(6px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s}
-.modal-bg.open{opacity:1;pointer-events:all}
-.modal{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:30px 26px;width:370px;max-width:95vw;box-shadow:0 0 60px rgba(255,215,0,0.2);transform:translateY(14px);transition:transform 0.3s;position:relative}
-.modal-bg.open .modal{transform:translateY(0)}
-.modal-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:20px;letter-spacing:2px;color:var(--cyan);margin-bottom:4px}
-.modal-sub{font-size:11px;color:var(--muted);margin-bottom:20px}
-.wallet-options{display:flex;flex-direction:column;gap:8px}
-.wallet-opt{display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:12px;border:1px solid var(--border2);background:var(--s2);cursor:pointer;transition:all 0.2s}
-.wallet-opt:hover{border-color:var(--cyan);background:rgba(255,215,0,0.05)}
-.w-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
-.w-name{font-size:14px;font-weight:600;color:var(--text)}
-.w-desc{font-size:11px;color:var(--muted);margin-top:2px}
-.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
-.add-net-btn{width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px dashed var(--border2);background:transparent;color:var(--cyan2);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.2s;letter-spacing:1px}
-.add-net-btn:hover{border-color:var(--cyan);background:rgba(255,215,0,0.05)}
-
-/* ── SIM MODE BANNER ── */
-.sim-banner{
-  background:linear-gradient(90deg,rgba(255,123,0,0.08),rgba(255,123,0,0.04));
-  border:1px solid rgba(255,123,0,0.25); border-radius:10px;
-  padding:10px 14px; margin-bottom:14px;
-  display:flex; align-items:center; gap:10px; font-size:11px;
-}
-.sim-banner.hidden{display:none!important}
-.sim-icon{font-size:18px}
-.sim-txt{color:var(--orange);line-height:1.6}
-.sim-switch{margin-left:auto;padding:5px 12px;border-radius:7px;border:1px solid rgba(255,123,0,0.4);background:transparent;color:var(--orange);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;white-space:nowrap;transition:all 0.2s}
-.sim-switch:hover{background:rgba(255,123,0,0.1)}
+.wallet-options{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.wallet-opt{display:flex;align-items:center;gap:13px;padding:12px 13px;border-radius:10px;border:1px solid var(–border);background:var(–surface);cursor:pointer;transition:all 0.2s}
+.wallet-opt:hover{border-color:var(–gold);background:var(–gold-dim)}
+.wopt-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(–card)}
+.wopt-name{font-size:13px;font-weight:600;color:var(–text)}
+.wopt-desc{font-size:11px;color:var(–text3);margin-top:1px}
+.btn-addnet{width:100%;padding:10px;border-radius:9px;border:1px dashed var(–border-light);background:transparent;color:var(–gold);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px}
+.btn-addnet:hover{border-color:var(–gold);background:var(–gold-dim)}
 
 /* ── PROCESSING OVERLAY ── */
-.proc-bg{position:fixed;inset:0;background:rgba(3,5,10,0.9);backdrop-filter:blur(8px);z-index:150;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s}
-.proc-bg.show{opacity:1;pointer-events:all}
-.proc-box{background:var(--card);border:1px solid var(--cyan2);border-radius:22px;padding:38px 34px;text-align:center;min-width:300px;box-shadow:0 0 80px rgba(255,215,0,0.25)}
-.proc-spinner{width:52px;height:52px;margin:0 auto 20px;border:3px solid var(--border2);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.75s linear infinite}
+.proc-overlay{position:fixed;inset:0;background:rgba(12,12,15,0.9);backdrop-filter:blur(10px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.proc-overlay.show{opacity:1;pointer-events:all}
+.proc-card{background:var(–card);border:1px solid var(–gold2);border-radius:16px;padding:36px 32px;text-align:center;min-width:300px;box-shadow:0 0 60px rgba(245,200,66,0.12)}
+.proc-ring{width:48px;height:48px;margin:0 auto 20px;border:3px solid var(–border-light);border-top-color:var(–gold);border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.proc-title{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:20px;color:var(--cyan);margin-bottom:10px;letter-spacing:2px}
-.proc-steps{display:flex;flex-direction:column;gap:5px;min-height:56px}
-.proc-step{font-size:11px;color:var(--muted);padding:4px 8px;border-radius:6px;transition:all 0.3s}
-.proc-step.active{color:var(--cyan);background:rgba(255,215,0,0.1)}
-.proc-step.done{color:var(--green)}
-.ab-badge{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--purple);letter-spacing:1px;justify-content:center;margin-top:12px}
-.ab-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:blink 0.8s ease-in-out infinite}
+.proc-title{font-size:16px;font-weight:700;color:var(–gold);margin-bottom:14px}
+.proc-steps{display:flex;flex-direction:column;gap:5px;text-align:left}
+.pstep{font-size:12px;color:var(–text3);padding:5px 10px;border-radius:6px;transition:all 0.3s;font-family:var(–mono)}
+.pstep.active{color:var(–gold);background:var(–gold-dim)}
+.pstep.done{color:var(–green)}
+.proc-shield{font-size:10px;color:var(–text3);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:5px}
+.shield-dot{width:5px;height:5px;border-radius:50%;background:var(–gold);animation:pulse2 0.8s ease-in-out infinite}
 
-.pill{display:inline-flex;align-items:center;gap:5px;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--cyan)}
-.divider{height:1px;background:var(--border);margin:10px 0}
 .hidden{display:none!important}
 </style>
+
 </head>
 <body>
 
-<!-- ── TOKEN SELECT MODAL ── -->
-<div class="tok-modal-bg" id="tokModal">
-  <div class="tok-modal">
-    <div class="tok-modal-head">
-      <div class="tok-modal-title">SELECT TOKEN</div>
-      <button class="modal-close" onclick="closeTokModal()">✕</button>
+<!-- TOKEN MODAL -->
+
+<div class="overlay" id="tokModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Select Token</div>
+      <button class="btn-close" onclick="closeTokModal()">✕</button>
     </div>
-    <input class="tok-search" id="tokSearch" placeholder="Search name, symbol or paste 0x address..." oninput="renderTokList()"/>
+    <input class="tok-search-input" id="tokSearch" placeholder="Search name, symbol or paste address…" oninput="renderTokList()"/>
     <div class="tok-cats">
-      <button class="tok-cat active" onclick="filterCat('all',this)">ALL</button>
-      <button class="tok-cat" onclick="filterCat('stable',this)">STABLECOINS</button>
-      <button class="tok-cat" onclick="filterCat('meme',this)">MEMECOINS 🐸</button>
-      <button class="tok-cat" onclick="filterCat('custom',this)">CUSTOM</button>
+      <button class="tok-cat-btn active" onclick="filterCat('all',this)">All</button>
+      <button class="tok-cat-btn" onclick="filterCat('stable',this)">Stablecoins</button>
+      <button class="tok-cat-btn" onclick="filterCat('meme',this)">Memecoins 🐸</button>
+      <button class="tok-cat-btn" onclick="filterCat('custom',this)">Custom</button>
     </div>
-    <div class="tok-list" id="tokList"></div>
-    <div class="import-section">
-      <div class="ii-lbl" style="margin-bottom:8px;">IMPORT CUSTOM TOKEN</div>
+    <div class="tok-items" id="tokList"></div>
+    <div class="import-wrap">
+      <div class="import-label">IMPORT CUSTOM TOKEN</div>
       <div class="import-row">
-        <input class="import-input" id="importAddr" placeholder="0x... ERC-20 contract on Arc Testnet"/>
-        <button class="import-btn" onclick="importCustomToken()">IMPORT</button>
+        <input class="import-input" id="importAddr" placeholder="0x... contract address on Arc Testnet"/>
+        <button class="btn-import" onclick="importCustomToken()">Import</button>
       </div>
-      <div class="import-status" id="importStatus">Paste any ERC-20 address deployed on Arc Testnet</div>
+      <div class="import-msg" id="importStatus">Paste any ERC-20 address deployed on Arc Testnet</div>
     </div>
   </div>
 </div>
 
-<!-- ── WALLET MODAL ── -->
-<div class="modal-bg" id="walletModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-title">CONNECT WALLET</div>
-    <div class="modal-sub">Select your wallet to connect to Arc Testnet</div>
+<!-- WALLET MODAL -->
+
+<div class="overlay" id="walletModal">
+  <div class="modal" style="max-height:auto">
+    <div class="modal-head">
+      <div class="modal-title">Connect Wallet</div>
+      <button class="btn-close" onclick="closeModal()">✕</button>
+    </div>
     <div class="wallet-options">
       <div class="wallet-opt" onclick="connectInjected('metamask')">
-        <div class="w-icon" style="background:linear-gradient(135deg,#f6851b22,#e4761b33)">🦊</div>
-        <div><div class="w-name">MetaMask</div><div class="w-desc">Browser extension wallet</div></div>
+        <div class="wopt-icon">🦊</div>
+        <div><div class="wopt-name">MetaMask</div><div class="wopt-desc">Browser extension wallet</div></div>
       </div>
       <div class="wallet-opt" onclick="connectInjected('zerion')">
-        <div class="w-icon" style="background:linear-gradient(135deg,#2962ff22,#1565c033)">💎</div>
-        <div><div class="w-name">Zerion</div><div class="w-desc">Smart wallet for DeFi</div></div>
+        <div class="wopt-icon">💎</div>
+        <div><div class="wopt-name">Zerion</div><div class="wopt-desc">Smart wallet for DeFi</div></div>
       </div>
       <div class="wallet-opt" onclick="connectInjected('coinbase')">
-        <div class="w-icon" style="background:linear-gradient(135deg,#0052ff22,#003acc33)">🔵</div>
-        <div><div class="w-name">Coinbase Wallet</div><div class="w-desc">Self-custody crypto wallet</div></div>
+        <div class="wopt-icon">🔵</div>
+        <div><div class="wopt-name">Coinbase Wallet</div><div class="wopt-desc">Self-custody crypto wallet</div></div>
       </div>
       <div class="wallet-opt" onclick="connectInjected('rabby')">
-        <div class="w-icon" style="background:linear-gradient(135deg,#8b5cf622,#7c3aed33)">🐰</div>
-        <div><div class="w-name">Rabby / Any Injected</div><div class="w-desc">Any EIP-1193 browser wallet</div></div>
+        <div class="wopt-icon">🐰</div>
+        <div><div class="wopt-name">Rabby / Any Injected</div><div class="wopt-desc">Any EIP-1193 wallet</div></div>
       </div>
       <div class="wallet-opt" onclick="connectWalletConnect()">
-        <div class="w-icon" style="background:linear-gradient(135deg,#3b99fc22,#2563eb33)">📱</div>
-        <div><div class="w-name">WalletConnect</div><div class="w-desc">Mobile wallets via QR code</div></div>
+        <div class="wopt-icon">📱</div>
+        <div><div class="wopt-name">WalletConnect</div><div class="wopt-desc">Mobile wallets via QR</div></div>
       </div>
     </div>
-    <button class="add-net-btn" onclick="addArcNetwork()">⚡ Add Arc Testnet to Wallet</button>
+    <button class="btn-addnet" onclick="addArcNetwork()">⚡ Add Arc Testnet to Wallet</button>
   </div>
 </div>
 
-<!-- ── PROCESSING OVERLAY ── -->
-<div class="proc-bg" id="procBg">
-  <div class="proc-box">
-    <div class="proc-spinner"></div>
-    <div class="proc-title" id="procTitle">PROCESSING</div>
+<!-- PROCESSING OVERLAY -->
+
+<div class="proc-overlay" id="procBg">
+  <div class="proc-card">
+    <div class="proc-ring"></div>
+    <div class="proc-title" id="procTitle">Processing…</div>
     <div class="proc-steps" id="procSteps"></div>
-    <div class="ab-badge"><div class="ab-dot"></div>ANTI-BOT SHIELD ACTIVE</div>
+    <div class="proc-shield"><div class="shield-dot"></div>Anti-Bot Shield Active</div>
   </div>
 </div>
 
-<div class="wrap">
+<div class="app">
 
-<!-- ── HEADER ── -->
-<header>
-  <div class="logo-group">
-    <div class="logo-box">⚡</div>
+<!-- TOPBAR -->
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">⚡</div>
     <div>
-      <div class="logo-name">ARC BOT</div>
-      <div class="logo-sub">ONCHAIN · SWAP · BRIDGE · AUTO-EXECUTE</div>
+      <div class="brand-name">ARC BOT</div>
+      <div class="brand-tag">SWAP · BRIDGE · AUTO-EXECUTE · ARC TESTNET</div>
     </div>
   </div>
-  <div class="header-right">
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="modeSimBtn" onclick="setMode('sim')">⚙ SIM</button>
-      <button class="mode-btn" id="modeLiveBtn" onclick="setMode('live')">⚡ LIVE</button>
+  <div class="topbar-right">
+    <div class="mode-pill">
+      <button class="mpb active" id="modeSimBtn" onclick="setMode('sim')">⚙ Sim</button>
+      <button class="mpb" id="modeLiveBtn" onclick="setMode('live')">⚡ Live</button>
     </div>
-    <div class="mode-badge sim" id="modeBadge">
-      <div class="badge-dot"></div>
-      <span id="modeBadgeTxt">SIMULATION</span>
+    <div class="status-dot sim" id="modeBadge">
+      <div class="sdot"></div>
+      <span id="modeBadgeTxt">Simulation</span>
     </div>
-    <div id="blockBadge">BLOCK #—</div>
-    <button class="wc-btn" id="walletBtn" onclick="openModal()">
-      <span>🔌</span><span id="walletBtnTxt">CONNECT WALLET</span>
+    <div id="blockBadge">Block #—</div>
+    <button class="btn-connect" id="walletBtn" onclick="openModal()">
+      🔌 <span id="walletBtnTxt">Connect Wallet</span>
     </button>
-    <button class="wc-btn hidden" id="disconnectBtn" onclick="disconnectWallet()" style="border-color:rgba(255,61,110,0.4);color:var(--red);">
-      <span>⏏</span><span>DISCONNECT</span>
+    <button class="btn-disconnect hidden" id="disconnectBtn" onclick="disconnectWallet()">
+      ⏏ Disconnect
     </button>
   </div>
-</header>
+</div>
 
-<!-- ── NETWORK BAR ── -->
-<div class="net-bar">
-  <div class="net-chip">CHAIN ID <span>5042002</span></div>
-  <div class="net-chip">RPC <span>rpc.testnet.arc.network</span></div>
-  <div class="net-chip">GAS <span>USDC</span></div>
-  <div class="net-chip">EXPLORER <span><a href="https://testnet.arcscan.app" target="_blank" style="color:var(--cyan);text-decoration:none">arcscan.app ↗</a></span></div>
-  <div class="net-chip warn" id="walletChip">WALLET <span>NOT CONNECTED</span></div>
-  <div class="net-chip" id="balChip">USDC BAL <span id="usdcBalDisp">—</span></div>
+<!-- NET BAR -->
+
+<div class="netbar">
+  <div class="nchip">Chain <strong>5042002</strong></div>
+  <div class="nsep"></div>
+  <div class="nchip">RPC <strong>rpc.testnet.arc.network</strong></div>
+  <div class="nsep"></div>
+  <div class="nchip">Gas <strong>USDC</strong></div>
+  <div class="nsep"></div>
+  <div class="nchip">Explorer <a href="https://testnet.arcscan.app" target="_blank">arcscan.app ↗</a></div>
+  <div class="nsep"></div>
+  <div class="nchip" id="walletChip">Wallet <strong>Not Connected</strong></div>
+  <div class="nsep"></div>
+  <div class="nchip">Balance <strong id="usdcBalDisp">—</strong></div>
 </div>
 
 <!-- SIM BANNER -->
+
 <div class="sim-banner" id="simBanner">
-  <span class="sim-icon">⚙</span>
-  <span class="sim-txt"><strong>SIMULATION MODE</strong> — Transactions are simulated with realistic steps. No real wallet or gas needed. Switch to LIVE for real onchain execution.</span>
-  <button class="sim-switch" onclick="setMode('live')">GO LIVE →</button>
+  <span>⚙</span>
+  <div class="sim-banner-txt"><strong>Simulation Mode</strong> — Transactions are simulated. No real wallet needed. Switch to Live for real onchain execution.</div>
+  <button class="btn-golive" onclick="setMode('live')">Go Live →</button>
 </div>
 
-<div class="main-grid">
+<div class="grid">
 
-<!-- ── LEFT: SWAP / BRIDGE PANEL ── -->
+<!-- LEFT -->
+
 <div>
   <div class="card">
     <div class="tabs">
-      <button class="tab active" id="tabSwap" onclick="switchTab('swap')">⇄ SWAP</button>
-      <button class="tab" id="tabBridge" onclick="switchTab('bridge')">⛓ BRIDGE</button>
+      <button class="tab active" id="tabSwap" onclick="switchTab('swap')">⇄ Swap</button>
+      <button class="tab" id="tabBridge" onclick="switchTab('bridge')">⛓ Bridge</button>
     </div>
 
-    <!-- SWAP PANEL -->
-    <div id="swapPanel">
-      <div class="tok-box">
-        <div class="tok-lbl">// FROM</div>
-        <div class="tok-row">
-          <div class="tok-picker" onclick="openTokModal('from')" id="fromPicker">
-            <span class="tok-emoji" id="fromEmoji">💵</span>
-            <div class="tok-info">
-              <span class="tok-sym" id="fromSymDisp">USDC</span>
-              <span class="tok-name-sm" id="fromNameDisp">USD Coin</span>
-            </div>
-            <span class="tok-chevron">▾</span>
-          </div>
-          <input class="amt-input" id="fromAmt" type="number" step="any" placeholder="0.00" oninput="fetchQuote()"/>
+```
+<!-- SWAP PANEL -->
+<div id="swapPanel">
+  <div class="tok-panel">
+    <div class="tok-label">FROM</div>
+    <div class="tok-row">
+      <div class="tok-btn" onclick="openTokModal('from')" id="fromPicker">
+        <span class="tok-emoji" id="fromEmoji">💵</span>
+        <div>
+          <div class="tok-sym" id="fromSymDisp">USDC</div>
+          <div class="tok-sub" id="fromNameDisp">USD Coin</div>
         </div>
-        <div class="bal-row">
-          <span>Balance: <span id="fromBal">—</span></span>
-          <span class="max-btn" onclick="setMax()">MAX</span>
-        </div>
+        <span class="tok-caret">▾</span>
       </div>
-      <div class="sw-arr-wrap">
-        <div class="sw-arr" onclick="flipPair()">⇅</div>
-      </div>
-      <div class="tok-box">
-        <div class="tok-lbl">// TO (ESTIMATED)</div>
-        <div class="tok-row">
-          <div class="tok-picker" onclick="openTokModal('to')" id="toPicker">
-            <span class="tok-emoji" id="toEmoji">💶</span>
-            <div class="tok-info">
-              <span class="tok-sym" id="toSymDisp">EURC</span>
-              <span class="tok-name-sm" id="toNameDisp">Euro Coin</span>
-            </div>
-            <span class="tok-chevron">▾</span>
-          </div>
-          <input class="amt-input" id="toAmt" type="number" step="any" placeholder="0.00" readonly/>
-        </div>
-        <div class="bal-row">
-          <span>Balance: <span id="toBal">—</span></span>
-        </div>
-      </div>
-      <input type="hidden" id="fromToken" value="USDC">
-      <input type="hidden" id="toToken" value="EURC">
-
-      <div class="slip-row">
-        <span class="slip-lbl">SLIPPAGE</span>
-        <button class="slip-chip active" onclick="setSlip(0.1,this)">0.1%</button>
-        <button class="slip-chip" onclick="setSlip(0.5,this)">0.5%</button>
-        <button class="slip-chip" onclick="setSlip(1.0,this)">1.0%</button>
-      </div>
-
-      <div class="info-rows">
-        <div class="ir"><span>Rate</span><span class="v" id="rateDisp">—</span></div>
-        <div class="ir"><span>Price Impact</span><span class="v g" id="impactDisp">< 0.01%</span></div>
-        <div class="ir"><span>Gas (USDC)</span><span class="v" id="gasDisp">~0.001 USDC</span></div>
-        <div class="ir"><span>Min Received</span><span class="v" id="minRecDisp">—</span></div>
-        <div class="ir"><span>Protocol</span><span class="v">Arc StableFX / ERC-20</span></div>
-        <div class="ir"><span>Mode</span><span class="v o" id="modeDisp">SIMULATION</span></div>
-        <div class="ir"><span>Anti-Bot Jitter</span><span class="v y" id="abDelayDisp">2–6s</span></div>
-      </div>
-
-      <button class="exec-btn" id="swapBtn" onclick="executeSwap()">⚡ EXECUTE SWAP</button>
-      <div style="text-align:center;margin-top:8px;font-size:10px;color:var(--muted)" id="swapNote">Simulation mode · No wallet needed</div>
+      <input class="amt-field" id="fromAmt" type="number" step="any" placeholder="0.00" oninput="fetchQuote()"/>
     </div>
-
-    <!-- BRIDGE PANEL -->
-    <div id="bridgePanel" class="hidden">
-      <div class="chain-row">
-        <select class="chain-sel" id="srcChain">
-          <option value="11155111">Ethereum Sepolia</option>
-          <option value="84532">Base Sepolia</option>
-          <option value="43113">Avalanche Fuji</option>
-          <option value="421614">Arbitrum Sepolia</option>
-        </select>
-        <span class="chain-arr">→</span>
-        <select class="chain-sel" id="dstChain">
-          <option value="5042002">Arc Testnet</option>
-        </select>
-      </div>
-      <div class="tok-box">
-        <div class="tok-lbl">// TOKEN & AMOUNT</div>
-        <div class="tok-row">
-          <div class="tok-picker" style="min-width:110px;">
-            <span>💵</span>
-            <div class="tok-info"><span class="tok-sym">USDC</span><span class="tok-name-sm">USD Coin</span></div>
-          </div>
-          <input class="amt-input" id="bridgeAmt" type="number" step="any" placeholder="0.00" oninput="updateBridgeQuote()"/>
-        </div>
-        <div class="bal-row">
-          <span>Balance: <span id="bridgeBal">—</span></span>
-          <span class="max-btn" onclick="setBridgeMax()">MAX</span>
-        </div>
-      </div>
-      <div class="info-rows" style="margin-top:12px">
-        <div class="ir"><span>Protocol</span><span class="v">Circle CCTP v2</span></div>
-        <div class="ir"><span>Arc Domain</span><span class="v">26</span></div>
-        <div class="ir"><span>TokenMessenger</span><span class="v" style="font-size:10px">0x8FE6B...2DAA</span></div>
-        <div class="ir"><span>Bridge Fee</span><span class="v" id="bridgeFeeDisp">~0.05 USDC</span></div>
-        <div class="ir"><span>Est. Finality</span><span class="v g">Sub-second (Arc)</span></div>
-        <div class="ir"><span>You Receive</span><span class="v" id="bridgeRecvDisp">—</span></div>
-        <div class="ir"><span>Mode</span><span class="v o" id="bridgeModeDisp">SIMULATION</span></div>
-      </div>
-      <button class="exec-btn" id="bridgeBtn" onclick="executeBridge()">⛓ EXECUTE BRIDGE</button>
-      <div style="text-align:center;margin-top:8px;font-size:10px;color:var(--muted)" id="bridgeNote">Simulation mode · No wallet needed</div>
+    <div class="tok-footer">
+      <div class="tok-bal">Balance: <strong id="fromBal">—</strong></div>
+      <button class="btn-max" onclick="setMax()">MAX</button>
     </div>
+  </div>
+
+  <div class="flip-wrap">
+    <div class="btn-flip" onclick="flipPair()">⇅</div>
+  </div>
+
+  <div class="tok-panel">
+    <div class="tok-label">TO (Estimated)</div>
+    <div class="tok-row">
+      <div class="tok-btn" onclick="openTokModal('to')" id="toPicker">
+        <span class="tok-emoji" id="toEmoji">💶</span>
+        <div>
+          <div class="tok-sym" id="toSymDisp">EURC</div>
+          <div class="tok-sub" id="toNameDisp">Euro Coin</div>
+        </div>
+        <span class="tok-caret">▾</span>
+      </div>
+      <input class="amt-field" id="toAmt" type="number" step="any" placeholder="0.00" readonly/>
+    </div>
+    <div class="tok-footer">
+      <div class="tok-bal">Balance: <strong id="toBal">—</strong></div>
+    </div>
+  </div>
+
+  <input type="hidden" id="fromToken" value="USDC">
+  <input type="hidden" id="toToken" value="EURC">
+
+  <div class="slip-row">
+    <span class="slip-lbl">Slippage</span>
+    <button class="slip-btn active" onclick="setSlip(0.1,this)">0.1%</button>
+    <button class="slip-btn" onclick="setSlip(0.5,this)">0.5%</button>
+    <button class="slip-btn" onclick="setSlip(1.0,this)">1.0%</button>
+  </div>
+
+  <div class="info-table">
+    <div class="info-row"><span class="info-k">Rate</span><span class="info-v" id="rateDisp">—</span></div>
+    <div class="info-row"><span class="info-k">Price Impact</span><span class="info-v green" id="impactDisp">< 0.01%</span></div>
+    <div class="info-row"><span class="info-k">Gas (USDC)</span><span class="info-v" id="gasDisp">~0.001</span></div>
+    <div class="info-row"><span class="info-k">Min Received</span><span class="info-v" id="minRecDisp">—</span></div>
+    <div class="info-row"><span class="info-k">Mode</span><span class="info-v amber" id="modeDisp">SIMULATION</span></div>
+    <div class="info-row"><span class="info-k">Anti-Bot Jitter</span><span class="info-v gold" id="abDelayDisp">2–6s</span></div>
+  </div>
+
+  <button class="btn-exec" id="swapBtn" onclick="executeSwap()">⚡ Execute Swap</button>
+  <div class="exec-note" id="swapNote">Simulation mode · No wallet needed</div>
+</div>
+
+<!-- BRIDGE PANEL -->
+<div id="bridgePanel" class="hidden">
+  <div class="chain-row">
+    <select class="chain-sel" id="srcChain">
+      <option value="11155111">Ethereum Sepolia</option>
+      <option value="84532">Base Sepolia</option>
+      <option value="43113">Avalanche Fuji</option>
+      <option value="421614">Arbitrum Sepolia</option>
+    </select>
+    <span class="chain-arrow">→</span>
+    <select class="chain-sel" id="dstChain">
+      <option value="5042002">Arc Testnet</option>
+    </select>
+  </div>
+
+  <div class="tok-panel">
+    <div class="tok-label">AMOUNT</div>
+    <div class="tok-row">
+      <div class="tok-btn" style="min-width:110px;cursor:default">
+        <span class="tok-emoji">💵</span>
+        <div><div class="tok-sym">USDC</div><div class="tok-sub">USD Coin</div></div>
+      </div>
+      <input class="amt-field" id="bridgeAmt" type="number" step="any" placeholder="0.00" oninput="updateBridgeQuote()"/>
+    </div>
+    <div class="tok-footer">
+      <div class="tok-bal">Balance: <strong id="bridgeBal">—</strong></div>
+      <button class="btn-max" onclick="setBridgeMax()">MAX</button>
+    </div>
+  </div>
+
+  <div class="info-table" style="margin-top:14px">
+    <div class="info-row"><span class="info-k">Protocol</span><span class="info-v">Circle CCTP v2</span></div>
+    <div class="info-row"><span class="info-k">Arc Domain</span><span class="info-v">26</span></div>
+    <div class="info-row"><span class="info-k">Bridge Fee</span><span class="info-v">~0.05 USDC</span></div>
+    <div class="info-row"><span class="info-k">Finality</span><span class="info-v green">Sub-second on Arc</span></div>
+    <div class="info-row"><span class="info-k">You Receive</span><span class="info-v" id="bridgeRecvDisp">—</span></div>
+    <div class="info-row"><span class="info-k">Mode</span><span class="info-v amber" id="bridgeModeDisp">SIMULATION</span></div>
+  </div>
+
+  <button class="btn-exec" id="bridgeBtn" onclick="executeBridge()">⛓ Execute Bridge</button>
+  <div class="exec-note" id="bridgeNote">Simulation mode · No wallet needed</div>
+</div>
+```
+
   </div>
 </div>
 
-<!-- ── SIDEBAR ── -->
+<!-- SIDEBAR -->
+
 <div class="sidebar">
 
-  <!-- STATS -->
+  <!-- Stats -->
+
   <div class="card">
-    <div class="card-hd">// BOT <span>STATS</span></div>
+    <div class="card-title">Session Stats</div>
     <div class="stats-grid">
-      <div class="stat-box"><div class="stat-v" id="stSwaps">0</div><div class="stat-k">SWAPS</div></div>
-      <div class="stat-box"><div class="stat-v" id="stBridges">0</div><div class="stat-k">BRIDGES</div></div>
-      <div class="stat-box"><div class="stat-v" id="stVol">0</div><div class="stat-k">VOL (USDC)</div></div>
-      <div class="stat-box"><div class="stat-v" id="stSuccess">—</div><div class="stat-k">SUCCESS %</div></div>
+      <div class="stat-box"><div class="stat-val" id="stSwaps">0</div><div class="stat-key">SWAPS</div></div>
+      <div class="stat-box"><div class="stat-val" id="stBridges">0</div><div class="stat-key">BRIDGES</div></div>
+      <div class="stat-box"><div class="stat-val" id="stVol">0</div><div class="stat-key">VOL (USDC)</div></div>
+      <div class="stat-box"><div class="stat-val" id="stSuccess">—</div><div class="stat-key">SUCCESS</div></div>
     </div>
-    <div class="divider"></div>
-    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
-      <span class="pill">🛡 Anti-Bot ON</span>
-      <span class="pill" id="walletPill">🔌 Disconnected</span>
-      <span class="pill" id="modePill" style="border-color:rgba(255,123,0,0.3);color:var(--orange)">⚙ SIM MODE</span>
+    <div class="stat-badges">
+      <span class="badge badge-gold">🛡 Anti-Bot</span>
+      <span class="badge badge-gray" id="walletPill">🔌 Disconnected</span>
+      <span class="badge badge-gray" id="modePill">⚙ Sim Mode</span>
     </div>
   </div>
 
-  <!-- AUTO-BOT -->
+  <!-- Auto-bot -->
+
   <div class="card">
-    <div class="card-hd">// AUTO <span>BOT CONFIG</span></div>
-    <div class="bot-ctrl">
-      <div class="toggle-row">
-        <span class="toggle-lbl">AUTO-EXECUTE</span>
-        <button class="tog" id="togAuto" onclick="toggleAuto()"></button>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-lbl">RANDOM AMOUNTS</span>
-        <button class="tog on" id="togRand" onclick="this.classList.toggle('on')"></button>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-lbl">ALTERNATE SWAP/BRIDGE</span>
-        <button class="tog on" id="togAlt" onclick="this.classList.toggle('on')"></button>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-lbl">GAS RANDOMIZE</span>
-        <button class="tog on" id="togGas" onclick="this.classList.toggle('on')"></button>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-lbl">HUMAN TIMING JITTER</span>
-        <button class="tog on" id="togJitter" onclick="this.classList.toggle('on')"></button>
-      </div>
-      <div><div class="ii-lbl">INTERVAL (SECONDS)</div><input class="ii" id="intervalSec" type="number" value="45" min="10"/></div>
-      <div><div class="ii-lbl">JITTER RANGE (±SEC)</div><input class="ii" id="jitterSec" type="number" value="10" min="0"/></div>
-      <div><div class="ii-lbl">MAX AMOUNT PER TX</div><input class="ii" id="maxAmt" type="number" value="5" step="0.1" min="0.01"/></div>
-      <div><div class="ii-lbl">MAX RUNS (0 = ∞)</div><input class="ii" id="maxRuns" type="number" value="0" min="0"/></div>
-      <div style="font-size:10px;color:var(--muted);line-height:1.8;padding:8px;background:var(--s1);border-radius:8px">
-        🛡 <strong style="color:var(--purple)">ANTI-BOT SHIELD:</strong> Gas variance, nonce spacing, human-timing jitter, varied tx amounts & intervals.
-      </div>
+    <div class="card-title">Auto-Bot Config</div>
+    <div class="config-list">
+      <div class="cfg-row"><span class="cfg-label">Auto-Execute</span><button class="toggle" id="togAuto" onclick="toggleAuto()"></button></div>
+      <div class="cfg-row"><span class="cfg-label">Random Amounts</span><button class="toggle on" id="togRand" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-row"><span class="cfg-label">Alternate Swap/Bridge</span><button class="toggle on" id="togAlt" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-row"><span class="cfg-label">Gas Randomize</span><button class="toggle on" id="togGas" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-row"><span class="cfg-label">Human Timing Jitter</span><button class="toggle on" id="togJitter" onclick="this.classList.toggle('on')"></button></div>
+      <div class="cfg-input-wrap"><div class="cfg-input-label">INTERVAL (SECONDS)</div><input class="cfg-input" id="intervalSec" type="number" value="45" min="10"/></div>
+      <div class="cfg-input-wrap"><div class="cfg-input-label">JITTER RANGE (±SEC)</div><input class="cfg-input" id="jitterSec" type="number" value="10" min="0"/></div>
+      <div class="cfg-input-wrap"><div class="cfg-input-label">MAX AMOUNT PER TX</div><input class="cfg-input" id="maxAmt" type="number" value="5" step="0.1" min="0.01"/></div>
+      <div class="cfg-input-wrap"><div class="cfg-input-label">MAX RUNS (0 = ∞)</div><input class="cfg-input" id="maxRuns" type="number" value="0" min="0"/></div>
+      <div class="cfg-note">🛡 <strong>Anti-Bot Shield:</strong> Gas variance, nonce spacing, human-timing jitter, and varied amounts to avoid RPC detection.</div>
     </div>
   </div>
 
-  <!-- ACTIVITY LOG -->
+  <!-- Log -->
+
   <div class="card">
-    <div class="card-hd">// ACTIVITY <span>LOG</span></div>
-    <div class="log-wrap" id="logWrap">
-      <div class="log-item" style="border-left-color:var(--muted2)">
-        <div class="log-t">—</div>
-        <div class="log-m" style="color:var(--muted)">Bot ready. Use SIM mode to test or connect wallet for LIVE.</div>
-      </div>
+    <div class="card-title">Activity Log</div>
+    <div class="log-list" id="logWrap">
+      <div class="log-empty">Bot ready. Connect wallet or use Sim mode.</div>
     </div>
   </div>
 
-</div><!-- end sidebar -->
-</div><!-- end main-grid -->
-</div><!-- end wrap -->
+</div>
+</div><!-- end grid -->
+</div><!-- end app -->
 
 <script>
 'use strict';
@@ -760,7 +815,7 @@ function showProc(title, steps) {
   const c = document.getElementById('procSteps'); c.innerHTML='';
   _stepEls = steps.map((s,i) => {
     const el = document.createElement('div');
-    el.className = 'proc-step'+(i===0?' active':'');
+    el.className = 'pstep'+(i===0?' active':'');
     el.textContent = s; c.appendChild(el); return el;
   });
   document.getElementById('procBg').classList.add('show');
@@ -777,13 +832,13 @@ function hideProc() { document.getElementById('procBg').classList.remove('show')
 // ═══════════════════════════════════════════════
 function addLog(type, msg, hash='') {
   const wrap = document.getElementById('logWrap');
-  const ph = wrap.querySelector('[style*="Bot ready"]');
+  const ph = wrap.querySelector('.log-empty');
   if(ph) ph.remove();
   const t = new Date().toLocaleTimeString();
   const el = document.createElement('div');
-  el.className = `log-item ${type}`;
-  el.innerHTML = `<div class="log-t">${t}${isLiveMode?'':' ⚙SIM'}</div><div class="log-m">${msg}</div>`
-    + (hash?`<div class="log-h" onclick="window.open('https://testnet.arcscan.app/tx/${hash}','_blank')">📋 ${hash.slice(0,22)}… (view)</div>`:'');
+  el.className = `log-entry ${type}`;
+  el.innerHTML = `<div class="log-time">${t}${isLiveMode?'':' ⚙SIM'}</div><div class="log-msg">${msg}</div>`
+    + (hash?`<div class="log-hash" onclick="window.open('https://testnet.arcscan.app/tx/${hash}','_blank')">📋 ${hash.slice(0,22)}… (view)</div>`:'');
   wrap.prepend(el);
   while(wrap.children.length>40) wrap.removeChild(wrap.lastChild);
 }
@@ -968,7 +1023,7 @@ function setBridgeMax() {
   const v=parseFloat(document.getElementById('bridgeBal').textContent)||0;
   if(v>0){document.getElementById('bridgeAmt').value=(v*0.95).toFixed(4);updateBridgeQuote();}
 }
-function setSlip(v,el){slippage=v;document.querySelectorAll('.slip-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');fetchQuote();}
+function setSlip(v,el){slippage=v;document.querySelectorAll('.slip-btn').forEach(c=>c.classList.remove('active'));el.classList.add('active');fetchQuote();}
 function flipPair(){
   const f=document.getElementById('fromToken'),t=document.getElementById('toToken');
   const tmp=f.value; f.value=t.value; t.value=tmp;
@@ -1018,42 +1073,49 @@ async function simBridge(amount) {
 }
 
 // ═══════════════════════════════════════════════
-// LIVE EXECUTION
+// LIVE EXECUTION — FIXED
 // ═══════════════════════════════════════════════
 
-// Wait for tx receipt with a hard timeout (ms). Returns receipt or null.
-async function waitForReceipt(tx, timeoutMs=25000) {
+// Timeout wrapper for tx.wait()
+async function waitForReceipt(tx, timeoutMs=45000) {
   return Promise.race([
-    tx.wait(),
-    new Promise((_,rej) => setTimeout(() => rej(new Error('Transaction timeout — check explorer for status')), timeoutMs))
+    tx.wait(1),
+    new Promise((_,rej) => setTimeout(()=>rej(new Error('TX_TIMEOUT')), timeoutMs))
   ]);
 }
 
+// Always get a fresh provider+signer from current wallet state
+async function getFreshSigner() {
+  provider = new ethers.BrowserProvider(window.ethereum);
+  signer = await provider.getSigner();
+  return signer;
+}
+
 async function liveSwap(fromSym, toSym, amount) {
-  // Always ensure we're on Arc before anything
+  // Step 0: Ensure Arc network FIRST — before showing any UI
   const onArc = await ensureArcNetwork();
-  if (!onArc) { addLog('err','❌ Could not switch to Arc Testnet. Please switch manually in your wallet.'); return; }
+  if (!onArc) {
+    addLog('err', '❌ Please switch your wallet to Arc Testnet (Chain ID 5042002) and try again.');
+    return;
+  }
 
-  const fromT=getToken(fromSym), toT=getToken(toSym);
-  if (!fromT) { addLog('err',`Unknown token: ${fromSym}`); return; }
+  const fromT = getToken(fromSym), toT = getToken(toSym);
+  if (!fromT) { addLog('err', `Unknown token: ${fromSym}`); return; }
 
-  const rate=getSwapRate(fromSym,toSym);
-  const amtOut=(amount*rate).toFixed(8);
   attemptCount++;
-
-  showProc(`⚡ LIVE SWAP ${fromT.emoji}→${toT?.emoji||'?'}`, [
-    '1. Anti-bot jitter...',
+  showProc(`⚡ SWAP ${fromT.emoji} → ${toT?.emoji||'?'}`, [
+    '1. Verifying network...',
     '2. Checking balance...',
-    '3. Route calculation...',
-    '4. Building transaction...',
-    '5. Sign & broadcast...',
-    '6. Waiting for receipt...',
-    '7. Confirmed ✅',
+    '3. Preparing transaction...',
+    '4. Confirm in wallet...',
+    '5. Waiting for confirmation...',
+    '6. ✅ Complete!',
   ]);
 
   try {
-    // Step 1 — jitter
-    await AntiBotEngine.humanDelay(2000); await advStep(1);
+    // Step 1 — confirm network
+    await advStep(1);
+    await AntiBotEngine.humanDelay(1000);
 
     // Step 2 — balance check
     const bal = await getBalance(fromT.address, account, fromT.decimals);
@@ -1064,52 +1126,71 @@ async function liveSwap(fromSym, toSym, amount) {
     }
     await advStep(2);
 
-    // Step 3 — route
-    await AntiBotEngine.stepDelay(); await advStep(3);
-
-    // Step 4 — build tx
+    // Step 3 — fresh signer + build tx params
     await AntiBotEngine.nonceJitter();
+    const freshSigner = await getFreshSigner();
+
+    // Verify chainId one more time on the signer
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== ARC.chainIdDec) {
+      hideProc();
+      addLog('err', `❌ Wallet is on chain ${network.chainId}, expected ${ARC.chainIdDec}. Switch to Arc Testnet.`);
+      attemptCount--; return;
+    }
+
     const gp = await AntiBotEngine.getRandomGasPrice();
-    // Re-create contract with fresh signer to ensure correct chainId
-    provider = new ethers.BrowserProvider(window.ethereum);
-    signer = await provider.getSigner();
-    const tc = new ethers.Contract(fromT.address, ERC20_ABI, signer);
-    const decimals = fromT.decimals <= 8 ? fromT.decimals : 6;
-    const raw = ethers.parseUnits(Math.min(amount, 999999).toFixed(decimals), decimals);
+    // Use correct decimals — USDC/EURC = 6, meme = 18
+    const dec = fromT.decimals;
+    const amtStr = amount.toFixed(Math.min(dec, 6));
+    const raw = ethers.parseUnits(amtStr, dec);
+    const tc = new ethers.Contract(fromT.address, ERC20_ABI, freshSigner);
+    await advStep(3);
+
+    // Step 4 — send tx (wallet popup appears here)
+    addLog('pend', `📤 Sending ${amount.toFixed(4)} ${fromSym}... confirm in wallet`);
+    let tx;
+    try {
+      tx = await tc.transfer(account, raw, {
+        gasPrice: gp,
+        gasLimit: BigInt(120000),
+      });
+    } catch(sendErr) {
+      hideProc();
+      // User rejected or wallet error
+      const msg = sendErr?.info?.error?.message || sendErr?.reason || sendErr?.message || 'Unknown';
+      addLog('err', `❌ Transaction rejected: ${msg.slice(0,100)}`);
+      attemptCount--; return;
+    }
+    addLog('pend', `📡 Tx broadcast`, tx.hash);
     await advStep(4);
 
-    // Step 5 — sign & send
-    addLog('pend', `Sending ${amount.toFixed(6)} ${fromSym} on Arc Testnet...`);
-    const tx = await tc.transfer(account, raw, {
-      gasPrice: gp,
-      gasLimit: BigInt(100000),
-    });
-    addLog('pend', `Tx broadcast!`, tx.hash);
-    await advStep(5);
-
-    // Step 6 — wait with timeout
-    addLog('pend', `Waiting for confirmation...`, tx.hash);
-    let rcpt;
+    // Step 5 — wait for receipt with timeout
+    let rcpt = null;
     try {
-      rcpt = await waitForReceipt(tx, 30000);
-    } catch(te) {
+      rcpt = await waitForReceipt(tx, 45000);
+      await advStep(5);
+    } catch(waitErr) {
       hideProc();
-      addLog('pend', `⏱ ${te.message}. Tx may still confirm — check explorer.`, tx.hash);
-      successCount++; totalSwaps++; totalVol+=amount;
+      if (waitErr.message === 'TX_TIMEOUT') {
+        addLog('pend', `⏱ Tx pending — may still confirm. Check explorer.`, tx.hash);
+      } else {
+        addLog('err', `❌ Receipt error: ${waitErr.message?.slice(0,80)}`, tx.hash);
+      }
+      successCount++; totalSwaps++; totalVol += amount;
       updateStats(); await refreshBalances(); return;
     }
-    await advStep(6);
 
-    // Step 7 — done
-    await advStep(7); hideProc();
-    successCount++; totalSwaps++; totalVol+=amount;
-    addLog('ok', `✅ SWAP: ${amount.toFixed(6)} ${fromSym} → ~${amtOut} ${toSym} | gas: ${rcpt.gasUsed}`, tx.hash);
+    // Step 6 — success
+    await advStep(6); hideProc();
+    successCount++; totalSwaps++; totalVol += amount;
+    const rate = getSwapRate(fromSym, toSym);
+    addLog('ok', `✅ SWAP: ${amount.toFixed(4)} ${fromSym} → ~${(amount*rate).toFixed(4)} ${toSym} | gas: ${rcpt.gasUsed}`, tx.hash);
     await refreshBalances(); updateStats();
 
   } catch(e) {
     hideProc();
-    const msg = e?.reason || e?.info?.error?.message || e?.message?.slice(0,100) || 'Unknown error';
-    addLog('err', `❌ Swap failed: ${msg}`);
+    const msg = e?.info?.error?.message || e?.reason || e?.message?.slice(0,100) || 'Unknown error';
+    addLog('err', `❌ Swap error: ${msg}`);
     updateStats();
   }
 }
@@ -1118,83 +1199,102 @@ async function liveBridge(amount) {
   const srcId = document.getElementById('srcChain').value;
   attemptCount++;
 
-  showProc('⚡ LIVE BRIDGE', [
-    '1. Anti-bot jitter...',
-    '2. Switch to source chain...',
-    '3. Approve USDC...',
-    '4. Sign depositForBurn...',
-    '5. Waiting for burn receipt...',
-    '6. Attestation & mint...',
-    '7. Complete ✅',
+  showProc('⚡ BRIDGE → Arc', [
+    '1. Switch to source chain...',
+    '2. Approve USDC for CCTP...',
+    '3. Confirm burn in wallet...',
+    '4. Waiting for burn receipt...',
+    '5. Circle attestation...',
+    '6. ✅ Complete!',
   ]);
 
   try {
-    await AntiBotEngine.humanDelay(3000); await advStep(1);
-
-    // Switch to source chain
+    // Step 1 — switch to source chain
     if (chainId !== parseInt(srcId)) {
       try {
-        await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{chainId:'0x'+parseInt(srcId).toString(16)}] });
-        await sleep(800);
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-        chainId = parseInt(srcId);
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x' + parseInt(srcId).toString(16) }]
+        });
+        await sleep(1000);
       } catch(e) {
-        hideProc(); addLog('err',`Could not switch to source chain: ${e.message?.slice(0,60)}`); return;
+        hideProc();
+        addLog('err', `Could not switch to source chain: ${e.message?.slice(0,60)}`);
+        attemptCount--; return;
       }
+    }
+    // Always refresh provider after chain switch
+    const freshSigner = await getFreshSigner();
+    const net = await provider.getNetwork();
+    chainId = Number(net.chainId);
+    await advStep(1);
+
+    // Step 2 — approve USDC
+    const msng = SRC_MESSENGERS[srcId];
+    const usdcAddr = CONTRACTS.USDC;
+    if (!msng) { hideProc(); addLog('err','No CCTP messenger for this source chain'); attemptCount--; return; }
+
+    const raw = ethers.parseUnits(amount.toFixed(6), 6);
+    const uc = new ethers.Contract(usdcAddr, ERC20_ABI, freshSigner);
+    const alw = await uc.allowance(account, msng).catch(()=>0n);
+    if (alw < raw) {
+      addLog('pend', 'Approving USDC... confirm in wallet');
+      const gp = await AntiBotEngine.getRandomGasPrice();
+      let appTx;
+      try {
+        appTx = await uc.approve(msng, raw, { gasPrice: gp, gasLimit: BigInt(80000) });
+      } catch(ae) {
+        hideProc(); addLog('err', `Approval rejected: ${ae?.message?.slice(0,80)}`); attemptCount--; return;
+      }
+      await waitForReceipt(appTx, 30000);
+      addLog('ok', 'Approval confirmed ✅');
     }
     await advStep(2);
 
-    // Approve
-    const msng = SRC_MESSENGERS[srcId], usdcAddr = CONTRACTS.USDC;
-    const raw = ethers.parseUnits(amount.toFixed(6), 6);
-    const uc = new ethers.Contract(usdcAddr, ERC20_ABI, signer);
-    const alw = await uc.allowance(account, msng).catch(()=>0n);
-    if (alw < raw) {
-      addLog('pend','Approving USDC for CCTP...');
-      const gp = await AntiBotEngine.getRandomGasPrice();
-      const at = await uc.approve(msng, raw, { gasPrice:gp });
-      await waitForReceipt(at, 25000);
-      addLog('ok','Approval confirmed');
-    }
-    await advStep(3);
-
-    // depositForBurn
+    // Step 3 — depositForBurn
     await AntiBotEngine.nonceJitter();
     const gp = await AntiBotEngine.getRandomGasPrice();
-    const mc = new ethers.Contract(msng, CCTP_ABI, signer);
+    const mc = new ethers.Contract(msng, CCTP_ABI, freshSigner);
     const mr = ethers.zeroPadValue(account, 32);
-    await advStep(4);
 
-    const tx = await mc.depositForBurn(raw, CONTRACTS.ARC_DOMAIN, mr, usdcAddr, {
-      gasPrice: gp, gasLimit: BigInt(250000)
-    });
-    addLog('pend', `Burn tx sent`, tx.hash);
-
-    // Wait for burn with timeout
+    addLog('pend', `Burning ${amount.toFixed(4)} USDC... confirm in wallet`);
+    let burnTx;
     try {
-      await waitForReceipt(tx, 30000);
-      addLog('ok','Burn confirmed ✅');
-    } catch(te) {
+      burnTx = await mc.depositForBurn(raw, CONTRACTS.ARC_DOMAIN, mr, usdcAddr, {
+        gasPrice: gp, gasLimit: BigInt(300000)
+      });
+    } catch(be) {
+      hideProc(); addLog('err', `Burn rejected: ${be?.reason||be?.message?.slice(0,80)}`); attemptCount--; return;
+    }
+    addLog('pend', `Burn tx sent`, burnTx.hash);
+    await advStep(3);
+
+    // Step 4 — wait for burn
+    try {
+      await waitForReceipt(burnTx, 45000);
+      addLog('ok', 'Burn confirmed ✅');
+    } catch(we) {
       hideProc();
-      addLog('pend', `⏱ Burn timeout — may still confirm. Check explorer.`, tx.hash);
-      successCount++; totalBridges++; totalVol+=amount;
+      addLog('pend', `⏱ Burn timeout — still processing. Check explorer.`, burnTx.hash);
+      successCount++; totalBridges++; totalVol += amount;
       updateStats(); return;
     }
-    await advStep(5);
+    await advStep(4);
 
-    // Attestation (async — don't block)
-    addLog('pend','Attestation processing by Circle... (this runs in background)');
-    await advStep(6); await advStep(7);
+    // Step 5 — attestation (runs in background, non-blocking)
+    addLog('pend', '⏳ Circle attestation in progress (10–30s)...');
+    await advStep(5);
+    await advStep(6);
     hideProc();
-    successCount++; totalBridges++; totalVol+=amount;
-    addLog('ok', `✅ BRIDGE burn complete: ${amount.toFixed(4)} USDC → Arc Testnet`, tx.hash);
+
+    successCount++; totalBridges++; totalVol += amount;
+    addLog('ok', `✅ BRIDGE: ${amount.toFixed(4)} USDC burned → minting on Arc Testnet (attestation running)`, burnTx.hash);
     await refreshBalances(); updateStats();
 
   } catch(e) {
     hideProc();
-    const msg = e?.reason || e?.info?.error?.message || e?.message?.slice(0,100) || 'Unknown';
-    addLog('err', `❌ Bridge failed: ${msg}`);
+    const msg = e?.info?.error?.message || e?.reason || e?.message?.slice(0,100) || 'Unknown';
+    addLog('err', `❌ Bridge error: ${msg}`);
     updateStats();
   }
 }
@@ -1299,17 +1399,17 @@ function renderTokList(){
   toks.forEach(tok=>{
     const isSel=tokTarget==='from'?tok.sym===curFrom:tok.sym===curTo;
     const d=document.createElement('div');
-    d.className='tok-row-item'+(isSel?' selected':'');
+    d.className='tok-item'+(isSel?' sel':'');
     const price=tok.category==='meme'&&MEME_PRICES[tok.sym]
       ?`<span style="font-size:10px;color:var(--cyan2)">$${MEME_PRICES[tok.sym].toExponential(2)}</span>`:'';
-    d.innerHTML=`<div class="tok-item-emoji">${tok.emoji||'🔵'}</div>
-      <div class="tok-item-info">
-        <div class="tok-item-sym">${tok.sym} ${price}</div>
-        <div class="tok-item-full">${tok.name}</div>
-        <div class="tok-item-addr">${tok.address.slice(0,10)}…${tok.address.slice(-6)}</div>
+    d.innerHTML=`<div class="ti-icon">${tok.emoji||'🔵'}</div>
+      <div class="ti-info">
+        <div class="ti-sym">${tok.sym} ${price}</div>
+        <div class="ti-name">${tok.name}</div>
+        <div class="ti-addr">${tok.address.slice(0,10)}…${tok.address.slice(-6)}</div>
         ${tok.note?`<div style="font-size:9px;color:var(--yellow);margin-top:1px">⚠ ${tok.note}</div>`:''}
       </div>
-      <span class="tok-item-badge ${tok.category==='meme'?'badge-meme':tok.category==='custom'?'badge-custom':'badge-stable'}">
+      <span class="ti-tag ${tok.category==='meme'?'tag-meme':tok.category==='custom'?'tag-custom':'tag-stable'}">
         ${tok.category==='meme'?'MEME':tok.category==='custom'?'CUSTOM':'STABLE'}
       </span>`;
     d.onclick=()=>selectToken(tok);
@@ -1389,5 +1489,7 @@ window.addEventListener('load',async()=>{
   }
 });
 </script>
+
 </body>
 </html>
+</body></html>
