@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" style="background:#0c0c0f;color:#f1f1f3">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;background:#0c0c0f;color:#f1f1f3}
 
 :root{
 –bg:#0c0c0f;
@@ -38,8 +38,9 @@ html{scroll-behavior:smooth}
 
 body{
 font-family:var(–sans);
-background:var(–bg);
-color:var(–text);
+background-color:#0c0c0f !important;
+background:var(–bg) !important;
+color:var(–text) !important;
 min-height:100vh;
 overflow-x:hidden;
 }
@@ -52,26 +53,25 @@ radial-gradient(ellipse 60% 50% at 20% 0%,rgba(245,200,66,0.04) 0%,transparent 7
 radial-gradient(ellipse 40% 40% at 80% 100%,rgba(245,200,66,0.03) 0%,transparent 70%);
 }
 
-.app{max-width:1200px;margin:0 auto;padding:20px 16px 60px;position:relative;z-index:1}
+.app{max-width:1200px;margin:0 auto;padding:16px 14px 60px;position:relative;z-index:1}
 
 /* ── TOPBAR ── */
 .topbar{
 display:flex;align-items:center;justify-content:space-between;
-padding:0 0 20px;border-bottom:1px solid var(–border);
-margin-bottom:24px;flex-wrap:wrap;gap:12px;
+padding:0 0 16px;border-bottom:1px solid var(–border);
+margin-bottom:18px;flex-wrap:wrap;gap:10px;
 }
-.brand{display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:12px}
 .brand-icon{
-width:40px;height:40px;border-radius:10px;
+width:38px;height:38px;border-radius:10px;
 background:linear-gradient(135deg,var(–gold),var(–gold2));
 display:flex;align-items:center;justify-content:center;
-font-size:20px;flex-shrink:0;
-box-shadow:0 0 20px rgba(245,200,66,0.3);
+font-size:18px;flex-shrink:0;
+box-shadow:0 0 16px rgba(245,200,66,0.25);
 }
-.brand-name{font-size:20px;font-weight:700;letter-spacing:0.5px;color:var(–text)}
-.brand-tag{font-size:11px;color:var(–text3);font-family:var(–mono);margin-top:1px}
-
-.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.brand-name{font-size:18px;font-weight:700;letter-spacing:0.3px;color:var(–text)}
+.brand-tag{font-size:10px;color:var(–text3);font-family:var(–mono);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 
 /* Mode pill */
 .mode-pill{
@@ -95,7 +95,7 @@ padding:6px 12px;border-radius:8px;font-size:12px;font-weight:500;
 .sim .sdot{background:var(–amber)} .live .sdot{background:var(–green)}
 @keyframes pulse2{0%,100%{opacity:1}50%{opacity:0.3}}
 
-#blockBadge{font-size:11px;color:var(–text3);font-family:var(–mono);background:var(–surface);border:1px solid var(–border);padding:5px 10px;border-radius:7px}
+#blockBadge{font-size:11px;color:var(–text3);font-family:var(–mono);background:var(–surface);border:1px solid var(–border);padding:5px 10px;border-radius:7px}@media(max-width:600px){#blockBadge{display:none}}
 
 .btn-connect{
 display:flex;align-items:center;gap:7px;
@@ -120,11 +120,14 @@ cursor:pointer;transition:all 0.2s;
 /* ── NET BAR ── */
 .netbar{
 display:flex;align-items:center;gap:6px;
-padding:10px 14px;background:var(–surface);
+padding:9px 12px;background:var(–surface);
 border:1px solid var(–border);border-radius:10px;
-margin-bottom:20px;flex-wrap:wrap;
+margin-bottom:16px;
+overflow-x:auto;white-space:nowrap;
+-webkit-overflow-scrolling:touch;
 }
-.nchip{font-size:11px;color:var(–text3);font-family:var(–mono);display:flex;align-items:center;gap:5px}
+.netbar::-webkit-scrollbar{display:none}
+.nchip{font-size:11px;color:var(–text3);font-family:var(–mono);display:inline-flex;align-items:center;gap:5px;flex-shrink:0}
 .nchip strong{color:var(–text2)}
 .nchip a{color:var(–gold);text-decoration:none}
 .nchip a:hover{color:var(–gold2)}
@@ -150,7 +153,15 @@ cursor:pointer;white-space:nowrap;transition:all 0.2s;
 
 /* ── LAYOUT ── */
 .grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
-@media(max-width:800px){.grid{grid-template-columns:1fr}}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+@media(max-width:500px){
+.topbar-right{width:100%}
+.brand-name{font-size:16px}
+.brand-tag{display:none}
+.btn-connect,.btn-disconnect{font-size:12px;padding:6px 12px}
+.mode-pill{flex:1}
+.mpb{flex:1;text-align:center}
+}
 
 /* ── CARD ── */
 .card{background:var(–card);border:1px solid var(–border);border-radius:14px;padding:20px}
@@ -487,7 +498,7 @@ position:relative;overflow:hidden;
 <div>
   <div class="card">
     <div class="tabs">
-      <button class="tab active" id="tabSwap" onclick="switchTab('swap')">⇄ Swap</button>
+      <button class="tab active" id="tabSwap" onclick="switchTab('swap')">⇌ Swap</button>
       <button class="tab" id="tabBridge" onclick="switchTab('bridge')">⛓ Bridge</button>
     </div>
 
@@ -1395,19 +1406,19 @@ function renderTokList(){
   if(tokCat!=='all') toks=toks.filter(t=>t.category===tokCat);
   if(q) toks=toks.filter(t=>t.sym.toLowerCase().includes(q)||t.name.toLowerCase().includes(q)||t.address.toLowerCase().includes(q));
   const list=document.getElementById('tokList'); list.innerHTML='';
-  if(!toks.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No tokens found</div>';return;}
+  if(!toks.length){list.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">No tokens found</div>';return;}
   toks.forEach(tok=>{
     const isSel=tokTarget==='from'?tok.sym===curFrom:tok.sym===curTo;
     const d=document.createElement('div');
     d.className='tok-item'+(isSel?' sel':'');
     const price=tok.category==='meme'&&MEME_PRICES[tok.sym]
-      ?`<span style="font-size:10px;color:var(--cyan2)">$${MEME_PRICES[tok.sym].toExponential(2)}</span>`:'';
+      ?`<span style="font-size:10px;color:var(--gold)">$${MEME_PRICES[tok.sym].toExponential(2)}</span>`:'';
     d.innerHTML=`<div class="ti-icon">${tok.emoji||'🔵'}</div>
       <div class="ti-info">
         <div class="ti-sym">${tok.sym} ${price}</div>
         <div class="ti-name">${tok.name}</div>
         <div class="ti-addr">${tok.address.slice(0,10)}…${tok.address.slice(-6)}</div>
-        ${tok.note?`<div style="font-size:9px;color:var(--yellow);margin-top:1px">⚠ ${tok.note}</div>`:''}
+        ${tok.note?`<div style="font-size:9px;color:var(--amber);margin-top:1px">⚠ ${tok.note}</div>`:''}
       </div>
       <span class="ti-tag ${tok.category==='meme'?'tag-meme':tok.category==='custom'?'tag-custom':'tag-stable'}">
         ${tok.category==='meme'?'MEME':tok.category==='custom'?'CUSTOM':'STABLE'}
