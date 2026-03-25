@@ -557,7 +557,7 @@ cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
 
   <div id="dexNotice" style="display:flex;align-items:center;gap:10px;background:#1a1400;border:1px solid #3a2e00;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#c8930a;">
     <span style="flex-shrink:0">ℹ️</span>
-    <span style="flex:1;line-height:1.5"><strong>No public DEX on Arc yet.</strong> Transfer sends FROM token to TO contract address.</span>
+    <span style="flex:1;line-height:1.5"><strong>No DEX on Arc Testnet.</strong> Token Transfer sends your real USDC to the Arc burn address — shows real amount on explorer.</span>
     <button onclick="document.getElementById('dexNotice').style.display='none'" style="background:none;border:none;color:#c8930a;font-size:16px;cursor:pointer;flex-shrink:0;padding:0 4px">✕</button>
   </div>
 
@@ -633,10 +633,10 @@ cursor: pointer; transition: all 0.2s; font-family: ‘Inter’, sans-serif;
   <div class="details">
     <div class="detail-row"><span class="dk">Rate</span><span class="dv" id="rateDisp">—</span></div>
     <div class="detail-row"><span class="dk">You Send</span><span class="dv" id="sendAmtDisp">—</span></div>
-    <div class="detail-row"><span class="dk">Recipient</span><span class="dv gold" id="recipientDisp">TO token contract</span></div>
+    <div class="detail-row"><span class="dk">Recipient</span><span class="dv gold" id="recipientDisp">0x000...dEaD (burn)</span></div>
+    <div class="detail-row"><span class="dk">Shows on Explorer</span><span class="dv green">Real amount ✓</span></div>
     <div class="detail-row"><span class="dk">Gas Fee</span><span class="dv gold">~0.001 USDC</span></div>
     <div class="detail-row"><span class="dk">Anti-Bot Jitter</span><span class="dv gold" id="abDelayDisp">2–6s</span></div>
-    <div class="detail-row"><span class="dk">ℹ️ Note</span><span class="dv" style="color:#f59e0b;font-size:10px;font-family:'Inter',sans-serif">Sends FROM token to TO contract · No DEX on Arc Testnet</span></div>
   </div>
 
   <button class="btn-exec" id="swapBtn" onclick="executeSwap()">⚡ Send Token Transfer</button>
@@ -1217,10 +1217,10 @@ function fetchQuote() {
   safe('impactDisp', isMeme?(Math.random()*1.5+0.3).toFixed(2)+'%':amt>500?(Math.random()*0.3+0.05).toFixed(3)+'%':'< 0.01%');
   const j=parseInt(document.getElementById('jitterSec').value)||10;
   safe('abDelayDisp', `2–${2+j}s`);
-  // Show send amount (capped at 0.01 for live)
-  safe('sendAmtDisp', amt>0?`${Math.min(amt,0.01).toFixed(4)} ${from}`:'—');
-  // Show recipient
-  if(toT) safe('recipientDisp', `${toT.sym} contract (${toT.address.slice(0,10)}…)`);
+  // Show real send amount
+  safe('sendAmtDisp', amt>0 ? `${amt.toFixed(4)} ${from}` : '—');
+  // Show recipient as burn address
+  safe('recipientDisp', '0x000...dEaD (Arc burn address)');
 }
 function updateBridgeQuote() {
   const amt=parseFloat(document.getElementById('bridgeAmt').value)||0;
@@ -1283,10 +1283,10 @@ async function getFreshSigner() {
 
 async function liveSwap(fromSym, toSym, amount) {
   // ─────────────────────────────────────────────
-  // Arc Testnet has no public DEX/AMM.
-  // This sends FROM token to the TO token's contract
-  // address — generates real onchain tx with different
-  // from/to addresses. Small amount to avoid waste.
+  // Arc Testnet has no DEX. This executes a real
+  // ERC-20 transfer of your FROM token to the
+  // Arc burn address (0x...dEaD) — shows the real
+  // amount on explorer with different from/to.
   // ─────────────────────────────────────────────
 
   const onArc = await ensureArcNetwork();
@@ -1298,23 +1298,22 @@ async function liveSwap(fromSym, toSym, amount) {
   const fromT = getToken(fromSym);
   const toT   = getToken(toSym);
   if (!fromT) { addLog('err', `Unknown token: ${fromSym}`); return; }
-  if (!toT)   { addLog('err', `Unknown token: ${toSym}`); return; }
 
-  // Meme token contracts are placeholders — block live
   if (fromT.category === 'meme') {
-    addLog('err', `❌ ${fromSym} is a placeholder contract. Use USDC or EURC for live txs.`);
+    addLog('err', `❌ ${fromSym} is a placeholder contract. Use USDC or EURC.`);
     return;
   }
 
-  // Send small amount to the TO token's contract address
-  const activityAmt = Math.min(amount, 0.01);
-  const recipient   = toT.address; // send to TO token's contract
+  // Use the REAL amount the user entered — no cap
+  // Send to Arc burn address so it shows correctly on explorer
+  const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
+  const realAmount = amount; // full amount, no cap
 
   attemptCount++;
-  showProc(`⚡ ${fromSym} → ${toT.address.slice(0,8)}…`, [
+  showProc(`⚡ Transfer ${realAmount.toFixed(4)} ${fromSym}`, [
     '1. Verifying Arc network...',
     '2. Checking balance...',
-    '3. Building transfer tx...',
+    '3. Building transaction...',
     '4. Confirm in wallet...',
     '5. Waiting for confirmation...',
     '6. ✅ Confirmed!',
@@ -1322,39 +1321,45 @@ async function liveSwap(fromSym, toSym, amount) {
 
   try {
     await advStep(1);
-    await AntiBotEngine.humanDelay(800);
+    await AntiBotEngine.humanDelay(600);
 
-    // Balance check
+    // Balance check — must have enough to cover the amount
     const bal = await getBalance(fromT.address, account, fromT.decimals);
-    if (bal !== null && bal < 0.002) {
+    if (bal !== null && bal < realAmount) {
       hideProc();
-      addLog('err', `❌ Need at least 0.002 ${fromSym} for gas. Get from faucet.circle.com`);
+      addLog('err', `❌ Insufficient ${fromSym}: you have ${bal.toFixed(4)}, need ${realAmount.toFixed(4)}`);
+      attemptCount--; return;
+    }
+    if (bal !== null && bal < 0.001) {
+      hideProc();
+      addLog('err', `❌ Balance too low. Get USDC from faucet.circle.com`);
       attemptCount--; return;
     }
     await advStep(2);
 
-    // Fresh signer + verify chain
+    // Fresh signer + chain check
     await AntiBotEngine.nonceJitter();
     const freshSigner = await getFreshSigner();
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== ARC.chainIdDec) {
       hideProc();
-      addLog('err', `❌ Wrong chain: ${network.chainId}. Need Arc Testnet (5042002).`);
+      addLog('err', `❌ Wrong chain ${network.chainId}. Need Arc Testnet (5042002).`);
       attemptCount--; return;
     }
 
     const gp  = await AntiBotEngine.getRandomGasPrice();
-    const raw = ethers.parseUnits(activityAmt.toFixed(6), 6);
+    // Parse with correct decimals (USDC/EURC = 6)
+    const dec = fromT.decimals <= 6 ? fromT.decimals : 6;
+    const raw = ethers.parseUnits(realAmount.toFixed(dec), dec);
     const tc  = new ethers.Contract(fromT.address, ERC20_ABI, freshSigner);
     await advStep(3);
 
-    // Send FROM token TO the destination token's contract address
-    addLog('pend', `📤 Sending ${activityAmt} ${fromSym} → ${toT.sym} contract (${recipient.slice(0,10)}…)`);
+    addLog('pend', `📤 Sending ${realAmount.toFixed(4)} ${fromSym} → burn address. Confirm in wallet…`);
     let tx;
     try {
-      tx = await tc.transfer(recipient, raw, {
+      tx = await tc.transfer(BURN_ADDRESS, raw, {
         gasPrice: gp,
-        gasLimit: BigInt(120000),
+        gasLimit: BigInt(150000),
       });
     } catch(e) {
       hideProc();
@@ -1362,7 +1367,7 @@ async function liveSwap(fromSym, toSym, amount) {
       addLog('err', `❌ Rejected: ${msg.slice(0,100)}`);
       attemptCount--; return;
     }
-    addLog('pend', `📡 Tx sent to ${toT.sym} contract`, tx.hash);
+    addLog('pend', `📡 Tx broadcast — ${realAmount.toFixed(4)} ${fromSym}`, tx.hash);
     await advStep(4);
 
     // Wait for receipt
@@ -1372,15 +1377,15 @@ async function liveSwap(fromSym, toSym, amount) {
       await advStep(5);
     } catch(te) {
       hideProc();
-      addLog('pend', `⏱ Tx pending — check explorer.`, tx.hash);
-      successCount++; totalSwaps++; totalVol += activityAmt;
+      addLog('pend', `⏱ Still pending — check explorer for status.`, tx.hash);
+      successCount++; totalSwaps++; totalVol += realAmount;
       updateStats(); await refreshBalances(); return;
     }
 
     await advStep(6); hideProc();
-    successCount++; totalSwaps++; totalVol += activityAmt;
+    successCount++; totalSwaps++; totalVol += realAmount;
     addLog('ok',
-      `✅ ${activityAmt} ${fromSym} sent to ${toT.sym} contract (${recipient.slice(0,10)}…) | gas: ${rcpt.gasUsed}`,
+      `✅ Sent ${realAmount.toFixed(4)} ${fromSym} | From: ${shortAddr(account)} → To: 0x...dEaD | Gas: ${rcpt.gasUsed}`,
       tx.hash);
     await refreshBalances(); updateStats();
 
