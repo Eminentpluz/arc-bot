@@ -1548,51 +1548,214 @@ async function executeBridge(silent=false) {
 // ═══════════════════════════════════════════════
 // AUTO-BOT
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// AUTO-BOT — Pre-sign queue system
+// Signs N txs upfront, broadcasts with random delays,
+// refills queue automatically when running low.
+// ═══════════════════════════════════════════════
+let autoQueue       = [];   // pre-signed tx pool
+let autoQueueNonce  = 0;    // next nonce to use
+let autoRefilling   = false;
+
+const AUTO_REFILL_THRESHOLD = 3;   // refill when queue drops to this
+const AUTO_PRESIGN_BATCH    = 10;  // sign 10 at a time
+
 function toggleAuto(){
-  const btn=document.getElementById('togAuto');
-  // Read current state THEN decide new state
+  const btn = document.getElementById('togAuto');
   const wasOn = btn.classList.contains('on');
   autoRunning = !wasOn;
   btn.classList.toggle('on', autoRunning);
 
   if(autoRunning){
     if(!account){
-      addLog('err','Connect wallet before starting live auto-bot');
+      addLog('err','❌ Connect wallet first');
       btn.classList.remove('on'); autoRunning=false; return;
     }
-    runCount=0;
-    addLog('pend',`🤖 AUTO-BOT ${true?'LIVE':'SIM'} STARTED · interval: ${document.getElementById('intervalSec').value}s`);
-    // Fire the first run immediately, then schedule subsequent ones
-    runAutoIteration();
+    runCount=0; autoQueue=[];
+    addLog('pend','🤖 AUTO-BOT: Pre-signing first batch of transactions…');
+    // Pre-sign first batch then start running
+    presignAndRun();
   } else {
     clearTimeout(autoTimer);
+    autoQueue=[];
     addLog('pend',`⏹ AUTO-BOT STOPPED after ${runCount} runs`);
   }
 }
 
+async function presignAndRun(){
+  if(!autoRunning) return;
+
+  const fromSym = document.getElementById('fromToken').value;
+  const fromT   = getToken(fromSym);
+  if(!fromT || fromT.category==='meme'){
+    addLog('err','❌ Select USDC or EURC as FROM token for auto-bot');
+    document.getElementById('togAuto').classList.remove('on'); autoRunning=false; return;
+  }
+
+  const onArc = await ensureArcNetwork();
+  if(!onArc){
+    addLog('err','❌ Switch to Arc Testnet first');
+    document.getElementById('togAuto').classList.remove('on'); autoRunning=false; return;
+  }
+
+  const maxAmt   = parseFloat(document.getElementById('maxAmt').value)||5;
+  const BURN     = '0x000000000000000000000000000000000000dEaD';
+  const dec      = fromT.decimals<=6?fromT.decimals:6;
+  const freshSigner = await getFreshSigner();
+  const feeData  = await provider.getFeeData();
+  const baseGas  = feeData.gasPrice || ethers.parseUnits('0.001','gwei');
+  const iface    = new ethers.Interface(ERC20_ABI);
+
+  // Get current nonce (continue from where we left off)
+  if(autoQueue.length === 0){
+    autoQueueNonce = await provider.getTransactionCount(account,'latest');
+  }
+
+  const howMany = AUTO_PRESIGN_BATCH;
+  addLog('pend', `✍️ Sign ${howMany} transactions now — approve each popup quickly…`);
+
+  let signed = 0;
+  for(let i=0; i<howMany; i++){
+    if(!autoRunning) break;
+
+    const doRand = document.getElementById('togRand').classList.contains('on');
+    const txAmt  = doRand
+      ? parseFloat((Math.random()*maxAmt*0.8+0.01).toFixed(dec))
+      : parseFloat((maxAmt*0.5).toFixed(dec));
+    const raw    = ethers.parseUnits(txAmt.toFixed(dec), dec);
+    const gpVar  = BigInt(Math.floor(Number(baseGas)*(1+(Math.random()*0.3-0.15))));
+
+    const txObj = {
+      to:       fromT.address,
+      data:     iface.encodeFunctionData('transfer',[BURN, raw]),
+      gasLimit: BigInt(150000),
+      gasPrice: gpVar,
+      nonce:    autoQueueNonce + autoQueue.length,
+      chainId:  BigInt(ARC.chainIdDec),
+    };
+
+    try {
+      const signedTx = await freshSigner.signTransaction(txObj);
+      autoQueue.push({ signedTx, amt: txAmt, sym: fromSym });
+      signed++;
+      addLog('ok', `✅ Signed tx ${i+1}/${howMany} (${txAmt.toFixed(4)} ${fromSym})`);
+    } catch(e){
+      if(e?.code===4001||e?.message?.includes('reject')||e?.message?.includes('cancel')){
+        addLog('err', `❌ Signing cancelled — auto-bot stopped`);
+        document.getElementById('togAuto').classList.remove('on'); autoRunning=false; return;
+      }
+      addLog('err', `❌ Sign failed: ${e?.message?.slice(0,60)}`);
+      break;
+    }
+  }
+
+  if(autoQueue.length===0){
+    addLog('err','❌ No transactions signed — auto-bot stopped');
+    document.getElementById('togAuto').classList.remove('on'); autoRunning=false; return;
+  }
+
+  addLog('ok', `✅ ${signed} txs pre-signed! Auto-bot running in background — no more popups.`);
+  scheduleNext();
+}
+
 async function runAutoIteration(){
   if(!autoRunning) return;
-  const maxR=parseInt(document.getElementById('maxRuns').value)||0;
-  if(maxR>0&&runCount>=maxR){
+
+  const maxR = parseInt(document.getElementById('maxRuns').value)||0;
+  if(maxR>0 && runCount>=maxR){
     addLog('ok',`🏁 AUTO-BOT COMPLETE: ${runCount}/${maxR} runs`);
     document.getElementById('togAuto').classList.remove('on');
     autoRunning=false; return;
   }
+
+  // If queue is empty, we need to refill
+  if(autoQueue.length===0){
+    addLog('pend','📋 Queue empty — refilling with new pre-signed txs…');
+    await presignAndRun();
+    return;
+  }
+
+  // Broadcast next tx from queue
+  const job = autoQueue.shift();
   runCount++;
-  const doAlt=document.getElementById('togAlt').classList.contains('on');
-  if(doAlt ? runCount%2===0 : currentTab==='bridge') await executeBridge(true);
-  else await executeSwap(true);
+
+  try {
+    const txResp = await provider.broadcastTransaction(job.signedTx);
+    addLog('pend', `📡 Auto tx #${runCount}: ${job.amt.toFixed(4)} ${job.sym}`, txResp.hash);
+
+    // Confirm in background
+    txResp.wait(1).then(rcpt=>{
+      addLog('ok', `✅ Auto tx #${runCount} confirmed | gas: ${rcpt.gasUsed}`, txResp.hash);
+      totalSwaps++; totalVol+=job.amt; successCount++; attemptCount++;
+      refreshBalances(); updateStats();
+    }).catch(err=>{
+      addLog('err', `❌ Auto tx #${runCount} failed: ${err?.message?.slice(0,50)}`);
+      attemptCount++;
+    });
+
+  } catch(e){
+    addLog('err', `❌ Broadcast failed: ${e?.message?.slice(0,60)}`);
+    attemptCount++;
+    // Put it back if nonce error, or discard
+  }
+
+  // Refill queue in background when running low
+  if(!autoRefilling && autoQueue.length <= AUTO_REFILL_THRESHOLD && autoRunning){
+    autoRefilling = true;
+    addLog('pend', `📋 Queue low (${autoQueue.length} left) — pre-signing next batch in background…`);
+    presignRefill().then(()=>{ autoRefilling=false; });
+  }
+
   scheduleNext();
+}
+
+async function presignRefill(){
+  if(!autoRunning) return;
+  const fromSym = document.getElementById('fromToken').value;
+  const fromT   = getToken(fromSym);
+  if(!fromT || fromT.category==='meme') return;
+
+  const maxAmt = parseFloat(document.getElementById('maxAmt').value)||5;
+  const BURN   = '0x000000000000000000000000000000000000dEaD';
+  const dec    = fromT.decimals<=6?fromT.decimals:6;
+  const freshSigner = await getFreshSigner();
+  const feeData = await provider.getFeeData();
+  const baseGas = feeData.gasPrice||ethers.parseUnits('0.001','gwei');
+  const iface   = new ethers.Interface(ERC20_ABI);
+
+  for(let i=0; i<AUTO_PRESIGN_BATCH; i++){
+    if(!autoRunning) break;
+    const doRand = document.getElementById('togRand').classList.contains('on');
+    const txAmt  = doRand
+      ? parseFloat((Math.random()*maxAmt*0.8+0.01).toFixed(dec))
+      : parseFloat((maxAmt*0.5).toFixed(dec));
+    const raw    = ethers.parseUnits(txAmt.toFixed(dec), dec);
+    const gpVar  = BigInt(Math.floor(Number(baseGas)*(1+(Math.random()*0.3-0.15))));
+    const txObj  = {
+      to: fromT.address,
+      data: iface.encodeFunctionData('transfer',[BURN,raw]),
+      gasLimit: BigInt(150000),
+      gasPrice: gpVar,
+      nonce: autoQueueNonce + autoQueue.length,
+      chainId: BigInt(ARC.chainIdDec),
+    };
+    try {
+      const signedTx = await freshSigner.signTransaction(txObj);
+      autoQueue.push({signedTx, amt: txAmt, sym: fromSym});
+    } catch(e){
+      if(e?.code===4001||e?.message?.includes('reject')) break;
+    }
+  }
+  addLog('ok', `✅ Refilled: ${autoQueue.length} txs ready in queue`);
 }
 
 function scheduleNext(){
   if(!autoRunning) return;
-  const base=(parseInt(document.getElementById('intervalSec').value)||45)*1000;
-  const jit=(parseInt(document.getElementById('jitterSec').value)||10)*1000;
-  // Minimum 3 seconds to avoid hammering, not 10
-  const actual=Math.max(3000, base+(Math.random()*2-1)*jit);
-  addLog('pend',`⏱ Next run in ${(actual/1000).toFixed(1)}s`);
-  autoTimer=setTimeout(()=>runAutoIteration(), actual);
+  const base = (parseInt(document.getElementById('intervalSec').value)||45)*1000;
+  const jit  = (parseInt(document.getElementById('jitterSec').value)||10)*1000;
+  const actual = Math.max(3000, base+(Math.random()*2-1)*jit);
+  addLog('pend',`⏱ Next tx in ${(actual/1000).toFixed(1)}s · ${autoQueue.length} txs queued`);
+  autoTimer = setTimeout(()=>runAutoIteration(), actual);
 }
 
 // ═══════════════════════════════════════════════
@@ -1729,9 +1892,8 @@ function batchNextCountdown(secs) {
 async function startBatch() {
   if (batchRunning) return;
 
-  // In live mode, require wallet
   if (!account) {
-    addLog('err', '❌ Connect your wallet first for live batch swaps');
+    addLog('err', '❌ Connect your wallet first');
     openModal(); return;
   }
 
@@ -1744,75 +1906,157 @@ async function startBatch() {
     addLog('err', '❌ Min delay must be less than max delay'); return;
   }
 
+  // Ensure on Arc network first
+  const onArc = await ensureArcNetwork();
+  if (!onArc) {
+    addLog('err', '❌ Switch to Arc Testnet first');
+    return;
+  }
+
+  const fromSym = document.getElementById('fromToken').value;
+  const fromT   = getToken(fromSym);
+  if (!fromT || fromT.category === 'meme') {
+    addLog('err', '❌ Select USDC or EURC as the FROM token for batch'); return;
+  }
+
+  // Check balance covers all txs
+  const bal = await getBalance(fromT.address, account, fromT.decimals);
+  const totalNeeded = amt * count;
+  if (bal !== null && bal < totalNeeded) {
+    addLog('err', `❌ Need ${totalNeeded.toFixed(4)} ${fromSym} for ${count} swaps, you have ${bal.toFixed(4)}`);
+    return;
+  }
+
+  const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD';
+  const dec = fromT.decimals <= 6 ? fromT.decimals : 6;
+
+  // ── PHASE 1: PRE-SIGN ALL TRANSACTIONS UPFRONT ──
+  addLog('pend', `✍️ Pre-signing ${count} transactions — approve each popup quickly…`);
+
+  document.getElementById('batchStatusTxt') && (document.getElementById('batchStatusTxt').textContent = `Sign all ${count} txs…`);
+
+  const freshSigner = await getFreshSigner();
+  const network     = await provider.getNetwork();
+  if (Number(network.chainId) !== ARC.chainIdDec) {
+    addLog('err', '❌ Wrong network. Switch to Arc Testnet.'); return;
+  }
+
+  // Get base nonce
+  let nonce = await provider.getTransactionCount(account, 'latest');
+  const feeData  = await provider.getFeeData();
+  const gasPrice = feeData.gasPrice || ethers.parseUnits('0.001', 'gwei');
+
+  const signedTxs = [];
+  const delays    = [];
+
+  for (let i = 0; i < count; i++) {
+    if (!batchRunning && i > 0) break; // allow stop during signing
+
+    // Slight gas variance for anti-bot
+    const gpVariance = BigInt(Math.floor(Number(gasPrice) * (1 + (Math.random() * 0.3 - 0.15))));
+    const txAmt = document.getElementById('togRand').classList.contains('on')
+      ? parseFloat((amt * (0.85 + Math.random() * 0.3)).toFixed(dec))
+      : amt;
+    const raw = ethers.parseUnits(txAmt.toFixed(dec), dec);
+
+    const txObj = {
+      to:       fromT.address,
+      data:     new ethers.Interface(ERC20_ABI).encodeFunctionData('transfer', [BURN_ADDRESS, raw]),
+      gasLimit: BigInt(150000),
+      gasPrice: gpVariance,
+      nonce:    nonce + i,
+      chainId:  BigInt(ARC.chainIdDec),
+    };
+
+    try {
+      addLog('pend', `✍️ Sign tx ${i+1}/${count} (${txAmt.toFixed(4)} ${fromSym})…`);
+      const signedTx = await freshSigner.signTransaction(txObj);
+      signedTxs.push({ signedTx, amt: txAmt, index: i + 1 });
+      const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1) + minDelay);
+      delays.push(delay);
+      addLog('ok', `✅ Tx ${i+1}/${count} signed`);
+    } catch(e) {
+      if (e?.code === 4001 || e?.message?.includes('rejected') || e?.message?.includes('cancel')) {
+        addLog('err', `❌ Tx ${i+1} rejected — batch stopped`);
+        return;
+      }
+      addLog('err', `❌ Sign failed tx ${i+1}: ${e?.message?.slice(0,60)}`);
+      return;
+    }
+  }
+
+  if (signedTxs.length === 0) { addLog('err', '❌ No transactions signed'); return; }
+
+  // ── PHASE 2: BROADCAST IN BACKGROUND WITH DELAYS ──
   batchRunning = true;
   batchDone    = 0;
-  batchTotal   = count;
+  batchTotal   = signedTxs.length;
 
-  // Show progress UI
   document.getElementById('batchProgress').style.display = 'block';
   document.getElementById('batchStartBtn').classList.add('hidden');
   document.getElementById('batchStopBtn').classList.remove('hidden');
-  document.getElementById('batchStatusTxt').textContent = 'Running batch…';
   updateBatchProgress();
 
-  addLog('pend', `🚀 BATCH STARTED: ${count} swaps · ${minDelay}–${maxDelay}s random delays · ${amt} USDC each`);
+  addLog('ok', `✅ All ${signedTxs.length} txs signed! Broadcasting in background with random delays…`);
+  addLog('pend', `📋 Delays: ${delays.map((d,i) => '#'+(i+1)+':'+d+'s').join(' · ')}`);
 
-  // Build the queue with random delays pre-assigned
-  const queue = [];
-  for (let i = 0; i < count; i++) {
-    const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1) + minDelay);
-    const type  = batchType === 'mix'
-      ? (i % 2 === 0 ? 'swap' : 'bridge')
-      : batchType;
-    queue.push({ index: i + 1, delay, type, amt });
-  }
+  // Broadcast each signed tx after its delay — runs in background
+  (async () => {
+    for (let i = 0; i < signedTxs.length; i++) {
+      if (!batchRunning) break;
 
-  // Log the full schedule upfront
-  addLog('pend', `📋 Schedule: ${queue.map(q => `#${q.index}(${q.type},${q.delay}s)`).join(' → ')}`);
+      const { signedTx, amt: txAmt, index } = signedTxs[i];
+      const delay = delays[i];
 
-  // Execute each swap sequentially with its pre-assigned delay
-  for (const job of queue) {
-    if (!batchRunning) break;
+      // Countdown
+      addLog('pend', `⏱ Tx #${index} broadcasts in ${delay}s…`);
+      batchNextCountdown(delay);
+      await sleep(delay * 1000);
 
-    // Wait the random delay before this swap
-    addLog('pend', `⏱ Swap #${job.index}/${count} (${job.type}) starts in ${job.delay}s…`);
-    batchNextCountdown(job.delay);
+      if (!batchRunning) break;
 
-    await sleep(job.delay * 1000);
-    if (!batchRunning) break;
+      try {
+        document.getElementById('batchStatusTxt').textContent = `Broadcasting tx ${index}/${batchTotal}…`;
+        const txResponse = await provider.broadcastTransaction(signedTx);
+        addLog('pend', `📡 Tx #${index} broadcast: ${txAmt.toFixed(4)} ${fromSym}`, txResponse.hash);
 
-    // Execute this swap
-    document.getElementById('batchStatusTxt').textContent = `Running swap ${job.index} of ${count}…`;
+        // Wait for confirmation in background (non-blocking)
+        txResponse.wait(1).then(rcpt => {
+          batchDone++;
+          updateBatchProgress();
+          addLog('ok', `✅ Tx #${index} confirmed | gas: ${rcpt.gasUsed}`, txResponse.hash);
+          refreshBalances();
+          updateStats();
+          totalSwaps++; totalVol += txAmt; successCount++; attemptCount++;
+          if (batchDone >= batchTotal) finishBatch(true);
+        }).catch(err => {
+          batchDone++;
+          updateBatchProgress();
+          addLog('err', `❌ Tx #${index} failed: ${err?.message?.slice(0,60)}`);
+          attemptCount++;
+          if (batchDone >= batchTotal) finishBatch(false);
+        });
 
-    if (job.type === 'bridge') {
-      document.getElementById('bridgeAmt').value = job.amt;
-      updateBridgeQuote();
-      await executeBridge(true);
-    } else {
-      document.getElementById('fromAmt').value = job.amt;
-      fetchQuote();
-      await executeSwap(true);
+      } catch(e) {
+        batchDone++;
+        updateBatchProgress();
+        addLog('err', `❌ Broadcast tx #${index} failed: ${e?.message?.slice(0,60)}`);
+        attemptCount++;
+      }
     }
+  })();
+}
 
-    batchDone++;
-    updateBatchProgress();
-    addLog('pend', `✔ ${batchDone}/${count} complete · ${count - batchDone} remaining`);
-  }
-
-  // Done
-  const finished = batchDone >= batchTotal;
+function finishBatch(success) {
   batchRunning = false;
-  document.getElementById('batchProgress').style.display = finished ? 'block' : 'block';
   document.getElementById('batchStartBtn').classList.remove('hidden');
   document.getElementById('batchStopBtn').classList.add('hidden');
-  document.getElementById('batchStatusTxt').textContent = finished
-    ? `✅ Batch complete! ${batchDone}/${batchTotal} done`
-    : `⏹ Stopped at ${batchDone}/${batchTotal}`;
+  document.getElementById('batchStatusTxt').textContent = success
+    ? `✅ All ${batchTotal} txs complete!`
+    : `⚠ Batch done with some failures`;
   document.getElementById('batchNextTxt').textContent = '';
-  document.getElementById('batchBar').style.width = finished ? '100%' : document.getElementById('batchBar').style.width;
-
-  addLog(finished ? 'ok' : 'pend',
-    `${finished ? '✅ BATCH COMPLETE' : '⏹ BATCH STOPPED'}: ${batchDone}/${batchTotal} swaps · Total vol: ${(batchDone * (parseFloat(document.getElementById('batchAmt').value)||0.01)).toFixed(4)} USDC`);
+  document.getElementById('batchBar').style.width = '100%';
+  addLog(success ? 'ok' : 'pend', `${success ? '✅ BATCH COMPLETE' : '⚠ BATCH DONE'}: ${batchDone}/${batchTotal} txs`);
 }
 
 function stopBatch() {
@@ -1822,7 +2066,7 @@ function stopBatch() {
   document.getElementById('batchStopBtn').classList.add('hidden');
   document.getElementById('batchStatusTxt').textContent = `⏹ Stopped at ${batchDone}/${batchTotal}`;
   document.getElementById('batchNextTxt').textContent = '';
-  addLog('pend', `⏹ Batch manually stopped at ${batchDone}/${batchTotal}`);
+  addLog('pend', `⏹ Batch stopped at ${batchDone}/${batchTotal}`);
 }
 
 // ═══════════════════════════════════════════════
